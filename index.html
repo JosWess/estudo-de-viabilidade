@@ -466,7 +466,7 @@ const BANCO_CUSTOS_REFERENCIA = [
   { item:'Terraplenagem', tipo:'area_total', taxa:10.00, topografia:true, fonte:'Composto SINAPI-CE: escavação (93336, R$4,11/m³) + carga/transporte (100978, R$3,92/m³), ~0,8 m³ de movimentação por m²' },
   { item:'Muro', tipo:'area_total', taxa:4.50, fonte:'Estimativa de mercado (varia muito por tipo de muro — sem composição SINAPI única aplicável)' },
   { item:'Drenagem geral', tipo:'area_viaria', taxa:14.00, fonte:'Estimativa de mercado (depende do projeto de drenagem específico — sem composição SINAPI genérica por m²)' },
-  { item:'Pavimentação', tipo:'area_viaria', taxa:62.00, fonte:'Composto SINAPI-CE: base+compactação (R$10,40/m²) + imprimação 96401 (R$6,05/m²) + pintura de ligação 72943 (R$2,71/m²) + CBUQ e=5cm 95994 (R$40,59/m²), com BDI de referência' }, // sobrescrito conforme o tipo escolhido
+  { item:'Pavimentação', tipo:'area_viaria', taxa:117.00, fonte:'SINAPI 92398 (execução piso intertravado, bloco 20x10cm e=8cm, média nacional R$106,83/m²) + base/compactação R$10,40/m²' }, // sobrescrito conforme o tipo escolhido
   { item:'Meio-fio', tipo:'area_viaria', taxa:13.30, fonte:'SINAPI-CE — guia+sarjeta (R$59,98/m linear), convertido a R$/m² assumindo faixa viária de 9m com meio-fio dos dois lados' },
   { item:'Rede de água', tipo:'por_lote', taxa:1800, fonte:'Estimativa de mercado (depende do traçado da rede — sem composição SINAPI por lote aplicável)' },
   { item:'Rede de esgoto', tipo:'por_lote', taxa:2400, fonte:'Estimativa de mercado (depende do traçado da rede — sem composição SINAPI por lote aplicável)' },
@@ -475,8 +475,7 @@ const BANCO_CUSTOS_REFERENCIA = [
   { item:'Área institucional', tipo:'area_verde_institucional', taxa:18.00, fonte:'Estimativa de mercado (sem composição SINAPI aplicável)' },
 ];
 const OPCOES_PAVIMENTACAO = [
-  { id:'asfalto', nome:'Asfalto (CBUQ)', taxa:62.00, fonte:'Composto SINAPI-CE: base+compactação + imprimação 96401 + pintura de ligação 72943 + CBUQ e=5cm 95994, com BDI de referência' },
-  { id:'bloquete', nome:'Bloquete / pavers', taxa:117.00, fonte:'SINAPI 92398 (execução piso intertravado, bloco 20x10cm e=8cm, média nacional R$106,83/m²) + base/compactação R$10,40/m²' },
+  { id:'bloquete', nome:'Bloquete pré-moldado', taxa:117.00, fonte:'SINAPI 92398 (execução piso intertravado, bloco 20x10cm e=8cm, média nacional R$106,83/m²) + base/compactação R$10,40/m²' },
   { id:'paralelepipedo', nome:'Paralelepípedo', taxa:220.00, fonte:'SINAPI 101169 (execução em paralelepípedos, rejuntamento em argamassa, média nacional desonerada R$221,83/m²)' },
   { id:'cascalho', nome:'Cascalho / terra (sem pavimentação)', taxa:10.40, fonte:'SINAPI-CE — base/compactação com brita graduada, sem camada de rolamento (adaptação; não há composição de "cascalho" dedicada no SINAPI)' },
 ];
@@ -2014,7 +2013,7 @@ function abrirModalEstimativa(){
     topografia: 'plano',
     tamanhoLote: 200,
     padrao: 'medio',
-    pavimentacao: 'asfalto',
+    pavimentacao: 'bloquete',
     pctViario: URBANISTICO_PADRAO.pctViario,
     pctVerdeInstitucional: URBANISTICO_PADRAO.pctVerdeInstitucional,
     fatorAproveitamento: URBANISTICO_PADRAO.fatorAproveitamento,
