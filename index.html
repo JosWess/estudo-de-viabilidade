@@ -1,0 +1,3367 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Estudo de Viabilidade</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{
+    --paper:#F1EEE4;
+    --paper-2:#E8E4D6;
+    --ink:#1E2A30;
+    --ink-soft:#4B5A60;
+    --line:#C9C2AC;
+    --line-soft:#DAD5C4;
+    --brick:#B14A28;
+    --brick-dark:#8A3A20;
+    --steel:#2E5266;
+    --steel-light:#DCE7EB;
+    --good:#33684A;
+    --good-bg:#DEEBE1;
+    --bad:#9A3324;
+    --bad-bg:#F3DED8;
+    --amber:#9C6B12;
+    --amber-bg:#F3E5C6;
+    --radius:6px;
+    --mono:'Courier New', Courier, monospace;
+    --sans:-apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+    --disp: Georgia, 'Times New Roman', serif;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;}
+  #app{
+    font-family:var(--sans);
+    color:var(--ink);
+    background:var(--paper);
+    min-height:100vh;
+    padding:0;
+  }
+  .wrap{max-width:1180px;margin:0 auto;padding:24px 20px 60px;}
+
+  /* header */
+  .hdr{
+    display:flex;justify-content:space-between;align-items:flex-end;
+    border-bottom:3px solid var(--ink);
+    padding-bottom:14px;margin-bottom:22px;
+    flex-wrap:wrap;gap:12px;
+  }
+  .hdr h1{
+    font-family:var(--disp);
+    font-size:26px;font-weight:700;margin:0;letter-spacing:0.2px;
+  }
+  .hdr .sub{
+    font-family:var(--mono);font-size:11px;color:var(--ink-soft);
+    text-transform:uppercase;letter-spacing:1.5px;margin-top:4px;
+  }
+  .hdr-actions{display:flex;gap:8px;align-items:center;}
+
+  button{
+    font-family:var(--sans);cursor:pointer;
+    border:1.5px solid var(--ink);background:var(--paper);
+    color:var(--ink);padding:8px 14px;border-radius:var(--radius);
+    font-size:13px;font-weight:600;
+  }
+  button:hover{background:var(--paper-2);}
+  button.primary{background:var(--brick);border-color:var(--brick-dark);color:#fff;}
+  button.primary:hover{background:var(--brick-dark);}
+  button.ghost{border-color:var(--line);font-weight:400;color:var(--ink-soft);}
+  button.danger{border-color:var(--bad);color:var(--bad);}
+  button.danger:hover{background:var(--bad-bg);}
+  button.btn-receita{border-color:var(--good);color:var(--good);background:var(--good-bg);}
+  button.btn-receita:hover{background:var(--good);color:#fff;}
+  button.btn-despesa{border-color:var(--bad);color:var(--bad);background:var(--bad-bg);}
+  button.btn-despesa:hover{background:var(--bad);color:#fff;}
+  button.btn-estimativa{border-color:var(--steel);color:var(--steel);background:var(--steel-light);}
+  button.btn-estimativa:hover{background:var(--steel);color:#fff;}
+  button.small{padding:4px 9px;font-size:11px;}
+  button:disabled{opacity:.4;cursor:not-allowed;}
+
+  /* ===== LISTA DE PROJETOS ===== */
+  .grid-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;}
+  .card-proj{
+    background:#fff;border:1px solid var(--line);border-radius:8px;
+    padding:16px 18px;cursor:pointer;position:relative;
+    transition:border-color .15s;
+  }
+  .card-proj:hover{border-color:var(--brick);}
+  .card-proj h3{margin:0 0 6px;font-family:var(--disp);font-size:17px;}
+  .card-proj .meta{font-family:var(--mono);font-size:11px;color:var(--ink-soft);margin-bottom:10px;}
+  .card-proj .res{font-family:var(--mono);font-size:15px;font-weight:700;}
+  .card-proj .res.pos{color:var(--good);}
+  .card-proj .res.neg{color:var(--bad);}
+  .card-proj .del{
+    position:absolute;top:10px;right:10px;background:none;border:none;
+    color:var(--ink-soft);font-size:16px;padding:2px 6px;font-weight:400;
+  }
+  .card-proj .del:hover{color:var(--bad);}
+  .card-proj .card-export{
+    position:absolute;top:10px;right:34px;background:none;border:none;
+    color:var(--ink-soft);font-size:13px;padding:2px 6px;font-weight:400;line-height:1;
+  }
+  .card-proj .card-export:hover{color:var(--steel);}
+  .card-compare{
+    display:flex;align-items:center;gap:6px;margin-top:10px;font-size:11px;color:var(--ink-soft);
+    cursor:pointer;user-select:none;
+  }
+  .card-compare input{width:13px;height:13px;}
+  .compare-bar{
+    display:flex;justify-content:space-between;align-items:center;background:var(--steel-light);
+    border:1px solid var(--steel);border-radius:8px;padding:10px 16px;margin-bottom:16px;font-size:13px;color:var(--ink);
+  }
+  .compare-alerta{
+    background:var(--amber-bg);border:1px solid var(--amber);color:var(--amber);border-radius:8px;
+    padding:12px 16px;margin:16px 0;font-size:13px;line-height:1.5;
+  }
+  .compare-scroll{overflow-x:auto;border:1px solid var(--line);border-radius:8px;margin-top:16px;}
+  table.compare-tabela{border-collapse:collapse;width:100%;font-size:13px;white-space:nowrap;}
+  table.compare-tabela th, table.compare-tabela td{padding:9px 16px;border-bottom:1px solid var(--line-soft);border-right:1px solid var(--line-soft);}
+  table.compare-tabela thead th{
+    background:var(--steel);color:#fff;font-family:var(--mono);font-size:11px;text-transform:uppercase;
+    letter-spacing:.5px;text-align:left;position:sticky;top:0;
+  }
+  table.compare-tabela td.compare-label{
+    font-weight:600;background:var(--paper-2);position:sticky;left:0;color:var(--ink-soft);font-size:12.5px;
+  }
+  table.compare-tabela td{font-family:var(--mono);}
+  table.compare-tabela td.compare-melhor{background:var(--good-bg);color:var(--good);font-weight:700;}
+  .compare-selo{
+    font-family:var(--sans);font-size:9px;text-transform:uppercase;letter-spacing:.3px;
+    background:var(--good);color:#fff;padding:1px 6px;border-radius:8px;vertical-align:middle;margin-left:4px;
+  }
+  .empty-state{
+    border:1.5px dashed var(--line);border-radius:8px;padding:50px 20px;text-align:center;
+    color:var(--ink-soft);
+  }
+  .empty-state p{font-size:14px;margin:0 0 14px;}
+
+  /* ===== EDITOR ===== */
+  .toolbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;flex-wrap:wrap;gap:10px;}
+  .toolbar .back{font-size:12px;color:var(--ink-soft);background:none;border:none;padding:4px 0;font-weight:600;}
+  .toolbar .back:hover{color:var(--brick);}
+  input.title-input{
+    font-family:var(--disp);font-size:22px;font-weight:700;border:none;background:transparent;
+    border-bottom:2px solid transparent;padding:2px 0;max-width:420px;width:100%;color:var(--ink);
+  }
+  input.title-input:focus{outline:none;border-bottom:2px solid var(--brick);}
+
+  .layout{display:grid;grid-template-columns:1fr 340px;gap:20px;align-items:start;}
+  @media(max-width:940px){.layout{grid-template-columns:1fr;}}
+
+  section.panel{
+    background:#fff;border:1px solid var(--line);border-radius:8px;
+    padding:18px 20px 22px;margin-bottom:16px;
+  }
+  section.panel h2{
+    font-family:var(--mono);font-size:12px;text-transform:uppercase;letter-spacing:1.5px;
+    color:var(--steel);margin:0 0 14px;padding-bottom:8px;border-bottom:1px solid var(--line-soft);
+  }
+  section.panel h2.panel-h{cursor:pointer;user-select:none;display:flex;justify-content:space-between;align-items:center;}
+  section.panel h2.panel-h .chevron{font-style:normal;font-size:12px;color:var(--ink-soft);transition:transform .15s;}
+  section.panel.collapsed h2.panel-h{margin-bottom:0;border-bottom:none;}
+  section.panel.collapsed h2.panel-h .chevron{transform:rotate(-90deg);}
+  section.panel.collapsed > *:not(h2){display:none;}
+  .field-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px 16px;margin-bottom:4px;}
+  .field{display:flex;flex-direction:column;gap:4px;}
+  .field label{font-size:11.5px;color:var(--ink-soft);font-weight:600;}
+  .field input, .field select{
+    font-family:var(--mono);font-size:13.5px;padding:7px 8px;border:1px solid var(--line);
+    border-radius:4px;background:var(--paper);color:var(--ink);width:100%;
+  }
+  .field input:focus, .field select:focus{outline:none;border-color:var(--steel);background:#fff;}
+  .field.wide{grid-column:1/-1;}
+  .hint{font-size:10.5px;color:var(--ink-soft);margin-top:2px;}
+  .metric-inline{
+    font-size:13px;color:var(--ink-soft);margin-top:10px;padding:10px 12px;
+    background:var(--paper-2);border-radius:6px;display:flex;justify-content:space-between;align-items:center;
+  }
+  .metric-inline strong{font-family:var(--mono);font-size:17px;}
+
+  table.costs{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:8px;}
+  table.costs th{
+    text-align:left;font-family:var(--mono);font-size:10.5px;text-transform:uppercase;
+    letter-spacing:.5px;color:var(--ink-soft);border-bottom:1px solid var(--line);padding:6px 6px;
+  }
+  table.costs td{border-bottom:1px solid var(--line-soft);padding:5px 6px;vertical-align:middle;}
+  table.costs input{
+    font-family:var(--mono);font-size:12.5px;border:1px solid transparent;background:transparent;
+    padding:5px 4px;border-radius:3px;width:100%;
+  }
+  table.costs input:hover{border-color:var(--line);}
+  table.costs input:focus{outline:none;border-color:var(--steel);background:var(--steel-light);}
+  table.costs td.val input{text-align:right;}
+  table.costs tr.total td{font-weight:700;border-top:2px solid var(--ink);border-bottom:none;padding-top:8px;}
+  table.costs td.rm{text-align:center;width:24px;}
+  table.costs td.rm button{padding:2px 6px;font-size:11px;border-color:var(--line);color:var(--ink-soft);}
+
+  /* resultados sidebar */
+  .metric{
+    display:flex;justify-content:space-between;align-items:baseline;
+    padding:9px 0;border-bottom:1px solid var(--line-soft);
+  }
+  .metric:last-child{border-bottom:none;}
+  .metric .lbl{font-size:12px;color:var(--ink-soft);}
+  .metric .val{font-family:var(--mono);font-size:14px;font-weight:700;}
+  .val-sub{font-size:11px;font-weight:400;color:var(--ink-soft);}
+  .info-btn{
+    display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;
+    border-radius:50%;border:1px solid var(--line);background:var(--paper);color:var(--ink-soft);
+    font-size:10px;font-style:italic;font-family:Georgia,serif;padding:0;margin-left:5px;
+    vertical-align:middle;cursor:pointer;line-height:1;
+  }
+  .info-btn:hover{border-color:var(--steel);color:var(--steel);background:var(--steel-light);}
+  .info-label{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--ink-soft);}
+  .info-formula{font-size:13px;color:var(--ink);background:var(--paper-2);border-radius:6px;padding:8px 10px;margin-top:4px;}
+  .info-memoria{font-family:var(--mono);font-size:12.5px;color:var(--ink);background:var(--steel-light);border-radius:6px;padding:8px 10px;margin-top:4px;line-height:1.6;}
+  .metric.hero{padding:14px 0;border-bottom:2px solid var(--ink);margin-bottom:6px;}
+  .sidebar-group-label{
+    font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:1px;
+    color:var(--steel);margin:14px 0 2px;
+  }
+  .metric.hero .lbl{font-size:12.5px;font-weight:600;color:var(--ink);}
+  .metric.hero .val{font-size:22px;}
+  .pos{color:var(--good);} .neg{color:var(--bad);} .warn{color:var(--amber);}
+  .login-screen{
+    position:fixed;inset:0;background:var(--ink);display:flex;align-items:center;justify-content:center;z-index:500;
+  }
+  .login-box{
+    background:var(--paper);border-radius:10px;padding:32px 30px;width:100%;max-width:340px;
+    box-shadow:0 20px 60px rgba(0,0,0,0.4);
+  }
+  .login-erro{
+    background:var(--bad-bg);color:var(--bad);border-radius:6px;padding:8px 10px;font-size:12.5px;margin-top:8px;
+  }
+  .obs-textarea{
+    width:100%;min-height:160px;resize:vertical;font-family:var(--sans);font-size:13px;line-height:1.5;
+    border:1px solid var(--line);border-radius:6px;padding:10px 12px;background:var(--paper);color:var(--ink);
+  }
+  .obs-textarea:focus{outline:none;border-color:var(--steel);background:#fff;}
+
+  #obsWidget{position:fixed;right:20px;bottom:20px;z-index:120;}
+  .obs-fab{
+    display:flex;align-items:center;gap:7px;padding:11px 18px;border-radius:26px;
+    background:var(--ink);color:#fff;border:none;font-weight:600;font-size:13px;font-family:var(--sans);
+    box-shadow:0 4px 16px rgba(0,0,0,0.28);cursor:pointer;
+  }
+  .obs-fab:hover{background:var(--brick-dark);}
+  .obs-fab-icon{font-style:normal;font-size:14px;}
+  .obs-badge{width:8px;height:8px;border-radius:50%;background:var(--good);display:inline-block;}
+  .obs-panel{
+    position:absolute;right:0;bottom:56px;width:340px;max-width:calc(100vw - 40px);
+    max-height:70vh;display:flex;flex-direction:column;
+    background:var(--paper);border:1px solid var(--line);border-radius:10px;
+    box-shadow:0 12px 34px rgba(0,0,0,0.24);padding:14px;
+  }
+  .obs-panel-header{
+    display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;
+    font-family:var(--mono);font-size:11px;font-weight:600;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.5px;
+  }
+  .obs-panel-header button{background:none;border:none;font-size:15px;color:var(--ink-soft);cursor:pointer;padding:0 4px;line-height:1;}
+  .obs-panel-header button:hover{color:var(--bad);}
+  .obs-panel .obs-textarea{min-height:64px;}
+  #obsFiltroWrap select{width:100%;padding:6px 8px;font-size:12px;border:1px solid var(--line);border-radius:5px;background:#fff;font-family:var(--sans);}
+  .obs-lista{overflow-y:auto;max-height:220px;margin-bottom:10px;border-bottom:1px solid var(--line-soft);padding-bottom:8px;}
+  .obs-nota{background:var(--paper-2);border-radius:6px;padding:8px 10px;margin-bottom:6px;}
+  .obs-nota-topo{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;}
+  .obs-nota-tag{
+    font-family:var(--mono);font-size:9.5px;text-transform:uppercase;letter-spacing:.4px;
+    color:var(--steel);background:var(--steel-light);padding:2px 7px;border-radius:10px;
+  }
+  .obs-nota-del{background:none;border:none;color:var(--ink-soft);font-size:11px;cursor:pointer;padding:0 2px;}
+  .obs-nota-del:hover{color:var(--bad);}
+  .obs-nota-texto{font-size:12.5px;line-height:1.5;color:var(--ink);white-space:pre-wrap;}
+  .obs-novo{padding-top:2px;}
+  .obs-novo select{width:100%;padding:7px 8px;font-size:12px;border:1px solid var(--line);border-radius:5px;background:#fff;font-family:var(--sans);margin-bottom:6px;}
+
+  .badge{
+    display:inline-block;font-family:var(--mono);font-size:11px;font-weight:700;
+    padding:3px 9px;border-radius:20px;letter-spacing:.3px;
+  }
+  .badge.good{background:var(--good-bg);color:var(--good);}
+  .badge.bad{background:var(--bad-bg);color:var(--bad);}
+  .badge.warn{background:var(--amber-bg);color:var(--amber);}
+
+  /* chart */
+  .chart-wrap{margin-top:6px;}
+  .chart-legend{display:flex;gap:16px;font-size:11.5px;color:var(--ink-soft);margin-bottom:6px;flex-wrap:wrap;}
+  .chart-legend span{display:inline-flex;align-items:center;gap:5px;}
+  .chart-legend i{width:10px;height:10px;display:inline-block;border-radius:2px;}
+  svg text{font-family:var(--mono);}
+  .add-row-btn{margin-top:10px;}
+
+  .footnote{font-size:10.5px;color:var(--ink-soft);margin-top:8px;line-height:1.5;}
+
+  .modo-toggle{display:flex;gap:8px;flex-wrap:wrap;}
+  .modo-btn{
+    font-size:11.5px;padding:6px 10px;border-radius:20px;font-weight:600;
+    border:1px solid var(--line);background:var(--paper);color:var(--ink-soft);
+  }
+  .modo-btn.active{background:var(--steel);border-color:var(--steel);color:#fff;}
+  .field input.calc{background:var(--steel-light);color:var(--steel);font-weight:700;cursor:not-allowed;}
+  input.money-in{font-family:var(--mono);text-align:right;font-variant-numeric:tabular-nums;}
+  .field input.money-in{text-align:right;}
+  input.money-in.calc{background:var(--steel-light);color:var(--steel);font-weight:700;cursor:not-allowed;}
+
+  .subhead{
+    font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:1px;
+    color:var(--brick-dark);margin:20px 0 8px;padding-top:14px;border-top:1px dashed var(--line);
+  }
+  .check-row{display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--ink-soft);margin:6px 0 4px;}
+  .check-row input{width:15px;height:15px;}
+
+  .fluxo-table-scroll{max-height:340px;overflow-y:auto;border:1px solid var(--line);border-radius:6px;}
+  table.fluxo-table{margin-top:0;font-size:12px;}
+  table.fluxo-table thead th{position:sticky;top:0;background:#fff;z-index:1;}
+  table.fluxo-table td.num, table.fluxo-table th.num{text-align:right;}
+  table.fluxo-table td.pos{color:var(--good);}
+  table.fluxo-table td.neg{color:var(--bad);}
+  table.fluxo-table tr.fluxo-mes-row{cursor:pointer;}
+  table.fluxo-table tr.fluxo-mes-row:hover{background:var(--steel-light);}
+  table.fluxo-table tr.fluxo-mes-row.aberta{background:var(--steel-light);}
+  table.fluxo-table tr.fluxo-mes-row .seta{font-style:normal;color:var(--ink-soft);font-size:10px;margin-left:4px;display:inline-block;transition:transform .15s;}
+  table.fluxo-table tr.fluxo-mes-row.aberta .seta{transform:rotate(90deg);}
+  .fluxo-detalhe{display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:10px 4px;}
+  .fluxo-detalhe-col{min-width:0;}
+  .fluxo-detalhe-titulo{font-family:var(--mono);font-size:10.5px;text-transform:uppercase;letter-spacing:.5px;color:var(--ink-soft);margin-bottom:6px;}
+  .fluxo-detalhe-item{display:flex;justify-content:space-between;gap:10px;font-size:12px;padding:3px 0;border-bottom:1px solid var(--line-soft);}
+  .fluxo-detalhe-item span:first-child{color:var(--ink-soft);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .fluxo-detalhe-vazio{font-size:11.5px;color:var(--ink-soft);font-style:italic;}
+  @media(max-width:560px){.fluxo-detalhe{grid-template-columns:1fr;}}
+
+  .modal-overlay{
+    position:fixed;inset:0;background:rgba(30,42,48,0.55);z-index:100;
+    display:flex;align-items:flex-start;justify-content:center;padding:40px 16px;overflow-y:auto;
+  }
+  .modal-box{
+    background:var(--paper);border-radius:10px;max-width:640px;width:100%;
+    padding:22px 24px 26px;box-shadow:0 10px 40px rgba(0,0,0,0.25);
+  }
+  .modal-box h2{margin:0 0 4px;font-family:var(--disp);font-size:19px;border:none;padding:0;text-transform:none;letter-spacing:0;color:var(--ink);}
+  .modal-close{position:absolute;top:0;right:0;}
+  .modal-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;}
+  .modal-header button{padding:4px 10px;font-size:16px;line-height:1;}
+  .previsao-rows{max-height:280px;overflow-y:auto;border:1px solid var(--line);border-radius:6px;margin:12px 0;}
+  .previsao-row{display:grid;grid-template-columns:90px 1fr 28px;gap:8px;align-items:center;padding:6px 10px;border-bottom:1px solid var(--line-soft);}
+  .previsao-row:last-child{border-bottom:none;}
+  .previsao-row .mes-label{font-family:var(--mono);font-size:12px;color:var(--ink-soft);}
+  .previsao-row input{font-family:var(--mono);text-align:right;padding:5px 8px;font-size:13px;border:1px solid var(--line);border-radius:4px;background:#fff;}
+  .previsao-row .rm{background:none;border:none;color:var(--ink-soft);font-size:14px;padding:2px 4px;}
+  .previsao-row .rm:hover{color:var(--bad);}
+  .previsao-total-bar{display:flex;justify-content:space-between;align-items:center;font-size:12.5px;color:var(--ink-soft);margin:8px 0;}
+  .cenario-item{display:flex;justify-content:space-between;align-items:center;padding:7px 10px;border:1px solid var(--line-soft);border-radius:6px;margin-bottom:6px;font-size:13px;}
+  .cenario-item .nome{font-weight:600;}
+  .cenario-item .acoes{display:flex;gap:6px;}
+
+  .modal-box.wide{max-width:min(96vw, 1180px);}
+  .cronograma-scroll{max-height:60vh;overflow:auto;border:1px solid var(--line);border-radius:6px;margin:12px 0;}
+  table.cronograma{border-collapse:separate;border-spacing:0;font-size:11.5px;white-space:nowrap;}
+  table.cronograma th, table.cronograma td{padding:5px 6px;border-bottom:1px solid var(--line-soft);border-right:1px solid var(--line-soft);}
+  table.cronograma thead th{
+    position:sticky;top:0;background:var(--steel);color:#fff;font-family:var(--mono);font-weight:600;
+    text-align:right;z-index:2;font-size:10.5px;
+  }
+  table.cronograma td.item-nome{
+    background:var(--paper);font-weight:600;text-align:left;
+    max-width:170px;overflow:hidden;text-overflow:ellipsis;
+  }
+  table.cronograma td.cel input{
+    width:78px;font-family:var(--mono);text-align:right;border:1px solid transparent;background:transparent;
+    padding:4px 5px;border-radius:3px;font-size:11.5px;
+  }
+  table.cronograma td.cel input:hover{border-color:var(--line);}
+  table.cronograma td.cel input:focus{outline:none;border-color:var(--steel);background:var(--steel-light);}
+  table.cronograma td.row-total{font-family:var(--mono);text-align:right;font-weight:700;background:var(--paper-2);}
+  table.cronograma tr.total-row td{font-weight:700;border-top:2px solid var(--ink);background:var(--paper-2);}
+  table.cronograma td.row-valor{font-family:var(--mono);text-align:right;color:var(--ink-soft);background:var(--paper-2);}
+  table.cronograma td.cel-acao{text-align:center;background:var(--paper);}
+  table.cronograma td.cel-acao button{font-size:10.5px;padding:3px 8px;}
+
+  table.cronograma .sticky-col1{position:sticky;left:0;width:170px;min-width:170px;z-index:1;}
+  table.cronograma .sticky-col2{position:sticky;left:170px;width:100px;min-width:100px;z-index:1;}
+  table.cronograma .sticky-col3{position:sticky;left:270px;width:100px;min-width:100px;z-index:1;}
+  table.cronograma .sticky-col4{position:sticky;left:370px;width:100px;min-width:100px;z-index:1;}
+  table.cronograma .sticky-col5{position:sticky;left:470px;width:78px;min-width:78px;z-index:1;border-right:2px solid var(--line);}
+  table.cronograma thead th.sticky-col1, table.cronograma thead th.sticky-col2, table.cronograma thead th.sticky-col3,
+  table.cronograma thead th.sticky-col4, table.cronograma thead th.sticky-col5{z-index:3;background:var(--steel);}
+  table.cronograma thead th.sticky-col1{text-align:left;}
+</style>
+</head>
+<body>
+<div id="loginScreen" class="login-screen">
+  <div class="login-box">
+    <h1 style="font-family:var(--disp);font-size:22px;margin:0 0 4px;">Estudo de Viabilidade</h1>
+    <div style="font-family:var(--mono);font-size:11px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:1px;margin-bottom:22px;">Acesso restrito</div>
+    <div class="field" style="margin-bottom:12px;">
+      <label>Usuário</label>
+      <input type="text" id="loginUsuario" autocomplete="username" placeholder="seu usuário">
+    </div>
+    <div class="field" style="margin-bottom:6px;">
+      <label>Senha</label>
+      <input type="password" id="loginSenha" autocomplete="current-password" placeholder="sua senha">
+    </div>
+    <div id="loginErro" class="login-erro" style="display:none;"></div>
+    <button id="loginBotao" class="primary" style="width:100%;margin-top:14px;">Entrar</button>
+  </div>
+</div>
+
+<div id="app" style="display:none;"></div>
+
+<script>
+/* ================= DADOS E CÁLCULOS ================= */
+
+const ITENS_PADRAO = [
+  ["Topografia",40000],["Projeto arquitetônico",0],["Licença de supressão vegetal",130000],
+  ["Supressão vegetal",151580],["Projeto drenagem/terraplenagem",0],["Projeto hidrossanitário",0],
+  ["Projeto RIST",0],["Projeto estudo ambiental",0],["Estudo de impacto de vizinhança",0],["Projeto 3D",0],
+  ["Projeto Enel",5000],["AVT Cagece",0],["Despachantes",212000],
+  ["Administração de obra",0],["Marketing",50000],["Terraplenagem",450000],["Drenagem geral",0],["ETE",0],
+  ["Pavimentação",1122209],["Meio-fio",313950],["Rede de água",150000],["Energia / iluminação pública",150000],
+  ["Portaria",100000],["Clube",500000],["Área institucional",600000],["Muro",543944.8],
+  ["Paisagismo",100000],["Outros",0]
+];
+
+/* ---- Banco de referência de custos estimados (R$/m² de área do terreno) ----
+   Valores de partida baseados em padrões gerais de mercado para urbanização de loteamentos.
+   NÃO vêm de uma base de dados online (o sistema roda todo offline) — são uma estimativa
+   inicial que precisa ser calibrada com orçamentos reais da sua região antes de decidir algo. */
+const BANCO_CUSTOS_REFERENCIA = [
+  { item:'Topografia', taxa:0.90 },
+  { item:'Licença de supressão vegetal', taxa:1.80 },
+  { item:'Supressão vegetal', taxa:2.20 },
+  { item:'Despachantes', taxa:3.50 },
+  { item:'Marketing', taxa:1.00 },
+  { item:'Terraplenagem', taxa:9.00 },
+  { item:'Drenagem geral', taxa:6.50 },
+  { item:'Pavimentação', taxa:22.00 }, // sobrescrito conforme o tipo escolhido
+  { item:'Meio-fio', taxa:5.50 },
+  { item:'Rede de água', taxa:8.00 },
+  { item:'Energia / iluminação pública', taxa:7.50 },
+  { item:'Portaria', taxa:1.20 },
+  { item:'Clube', taxa:3.50 },
+  { item:'Área institucional', taxa:2.80 },
+  { item:'Muro', taxa:4.50 },
+  { item:'Paisagismo', taxa:1.60 },
+];
+const OPCOES_PAVIMENTACAO = [
+  { id:'asfalto', nome:'Asfalto (CBUQ)', taxa:22.00 },
+  { id:'bloquete', nome:'Bloquete / pavers', taxa:18.00 },
+  { id:'paralelepipedo', nome:'Paralelepípedo', taxa:15.00 },
+  { id:'cascalho', nome:'Cascalho / terra (sem pavimentação)', taxa:4.00 },
+];
+
+function projetoModelo(){
+  return {
+    id: 'p_modelo_'+Date.now(),
+    nome: 'Modelo Sistema (planilha original)',
+    criadoEm: new Date().toISOString(),
+    terreno:{ modo:'auto_total', considerarPermuta:true, considerarCompraFluxo:true, area:53531.29, valorCompra:6500000, sinal:500000, qtdParcelas:10, valorParcela:100000, permuta:4500000, outrosCustos:500000, dataCompra:'2024-12-01' },
+    lotes:{ totalLotes:243, lotesPermuta:75, lotesInvestidor:27 },
+    comissao:{ valorLote:127450.38, pct:6, abaterReceita:true },
+    vendas:{
+      inicioVendas:'2025-06-01',
+      condicao:{ entradaPct:10, entradaParcelas:1, saldoModo:'simultaneo', qtdParcelas:72, valorBalao:0, intervaloBalaoMeses:12, reajusteSaldoAnual:0, outros:'' },
+      investidores:{ qtd:27, valorLote:0, considerarNoResultado:false, considerarNoFluxo:false, dataRecebimento:'2025-06-01' },
+      previsao: []
+    },
+    obra:{ inicioObra:'2026-06-01', prazoObraMeses:12 },
+    fiscal:{ pctImposto:6.73 },
+    financeiro:{ taxaDescontoMensal:1 },
+    observacoesNotas:[],
+    custos: ITENS_PADRAO.map(([item,valor])=>({item,valor,cronograma:[]}))
+  };
+}
+
+function novoProjeto(nome){
+  return {
+    id: 'p_'+Date.now()+'_'+Math.random().toString(36).slice(2,7),
+    nome: nome || 'Novo projeto',
+    criadoEm: new Date().toISOString(),
+    terreno:{ modo:'auto_parcela', considerarPermuta:true, considerarCompraFluxo:true, area:0, valorCompra:0, sinal:0, qtdParcelas:0, valorParcela:0, permuta:0, outrosCustos:0, dataCompra: hojeStr() },
+    lotes:{ totalLotes:0, lotesPermuta:0, lotesInvestidor:0 },
+    comissao:{ valorLote:0, pct:0, abaterReceita:true },
+    vendas:{
+      inicioVendas: hojeStr(),
+      condicao:{ entradaPct:0, entradaParcelas:1, saldoModo:'simultaneo', qtdParcelas:1, valorBalao:0, intervaloBalaoMeses:12, reajusteSaldoAnual:0, outros:'' },
+      investidores:{ qtd:0, valorLote:0, considerarNoResultado:false, considerarNoFluxo:false, dataRecebimento: hojeStr() },
+      previsao: []
+    },
+    obra:{ inicioObra: hojeStr(), prazoObraMeses:1 },
+    fiscal:{ pctImposto:0 },
+    financeiro:{ taxaDescontoMensal:1 },
+    observacoesNotas:[],
+    custos: ITENS_PADRAO.map(([item])=>({item, valor:0, cronograma:[]}))
+  };
+}
+function normalizarProjeto(p){
+  if(!p) return p;
+  if(!p.comissao) p.comissao = { valorLote: p.vendas && p.vendas.precoDireta ? p.vendas.precoDireta : 0, pct:6, abaterReceita:true };
+  if(p.vendas && !p.vendas.condicao) p.vendas.condicao = { entradaPct:10, entradaParcelas:1, qtdParcelas: p.vendas.prazoVendaMeses||36, valorBalao:0, intervaloBalaoMeses:12, outros:'' };
+  if(p.vendas && p.vendas.condicao && p.vendas.condicao.entradaPct===undefined){ p.vendas.condicao.entradaPct = 0; p.vendas.condicao.entradaParcelas = 1; }
+  if(p.vendas && p.vendas.condicao && p.vendas.condicao.reajusteSaldoAnual===undefined){ p.vendas.condicao.reajusteSaldoAnual = 0; }
+  if(p.vendas && p.vendas.condicao && p.vendas.condicao.saldoModo===undefined){
+    p.vendas.condicao.saldoModo = p.vendas.condicao.saldoSequencial ? 'apos_entrada' : 'simultaneo';
+    delete p.vendas.condicao.saldoSequencial;
+  }
+  if(p.vendas && !p.vendas.investidores) p.vendas.investidores = { qtd: p.vendas.qtdInvestidorVenda||0, valorLote: p.vendas.precoInvestidor||0, considerarNoResultado:false, considerarNoFluxo:false, dataRecebimento: p.vendas.inicioVendas||hojeStr() };
+  if(p.vendas && p.vendas.investidores && p.vendas.investidores.considerarNoFluxo===undefined){
+    p.vendas.investidores.considerarNoFluxo = false;
+    p.vendas.investidores.dataRecebimento = p.vendas.investidores.dataRecebimento || p.vendas.inicioVendas || hojeStr();
+  }
+  if(p.vendas && p.vendas.investidores && p.vendas.investidores.considerarNoResultado===undefined) p.vendas.investidores.considerarNoResultado = false;
+  if(p.vendas && !p.vendas.previsao) p.vendas.previsao = [];
+  if(p.custos) p.custos.forEach(c=>{ if(!c.cronograma) c.cronograma = []; });
+  if(!p.financeiro) p.financeiro = { taxaDescontoMensal: 1 };
+  if(!p.observacoesNotas){
+    p.observacoesNotas = (p.observacoes && p.observacoes.trim())
+      ? [{ id:'n_'+Date.now(), texto:p.observacoes.trim(), topico:'Geral', criadoEm:new Date().toISOString() }]
+      : [];
+  }
+  if(p.terreno && p.terreno.considerarPermuta===undefined) p.terreno.considerarPermuta = true;
+  if(p.terreno && p.terreno.considerarCompraFluxo===undefined) p.terreno.considerarCompraFluxo = true;
+  if(p.fiscal && p.fiscal.pctComissao!==undefined) delete p.fiscal.pctComissao;
+  return p;
+}
+function hojeStr(){ const d=new Date(); return d.toISOString().slice(0,10); }
+function addMonthsStr(str,n){ const d=new Date(str+'T00:00:00'); d.setMonth(d.getMonth()+n); return d.toISOString().slice(0,10); }
+
+/* ---- Retorno financeiro: VPL (valor presente líquido) e TIR (taxa interna de retorno) ---- */
+function calcularVPL(serie, taxaMensal){
+  let vpl = 0;
+  serie.forEach((s,t)=>{ vpl += s.liquido / Math.pow(1+taxaMensal, t); });
+  return vpl;
+}
+function calcularIndiceLucratividade(serie, taxaMensal){
+  let vpEntradas = 0, vpSaidas = 0;
+  serie.forEach((s,t)=>{
+    const fator = Math.pow(1+taxaMensal, t);
+    vpEntradas += s.entrada / fator;
+    vpSaidas += s.saida / fator;
+  });
+  return vpSaidas>0 ? vpEntradas/vpSaidas : null;
+}
+function calcularTIR(serie){
+  if(!serie.length) return null;
+  const vplAt = taxa => calcularVPL(serie, taxa);
+  const taxaMin = -0.99, taxaMax = 20, passos = 400;
+  let anterior = vplAt(taxaMin), taxaAnterior = taxaMin, bracket = null;
+  for(let i=1;i<=passos;i++){
+    const taxa = taxaMin + (taxaMax-taxaMin)*i/passos;
+    const v = vplAt(taxa);
+    if((anterior<0 && v>=0) || (anterior>0 && v<=0)){ bracket = [taxaAnterior, taxa]; break; }
+    anterior = v; taxaAnterior = taxa;
+  }
+  if(!bracket) return null;
+  let [lo, hi] = bracket;
+  const vLoSign = vplAt(lo) < 0;
+  for(let i=0;i<80;i++){
+    const mid = (lo+hi)/2;
+    const vMidNeg = vplAt(mid) < 0;
+    if(vMidNeg===vLoSign) lo = mid; else hi = mid;
+  }
+  return (lo+hi)/2;
+}
+
+function calcular(p){
+  const lotesPropios = Math.max(p.lotes.totalLotes - p.lotes.lotesPermuta, 0);
+  const qtdDireta = Math.max(p.lotes.totalLotes - p.lotes.lotesPermuta - (Number(p.vendas.investidores.qtd)||0), 0);
+  const comissaoPorLote = (Number(p.comissao.valorLote)||0) * (Number(p.comissao.pct)||0)/100;
+  const comissaoAbatida = !!p.comissao.abaterReceita;
+  const precoDireta = Math.max((Number(p.comissao.valorLote)||0) - (comissaoAbatida ? comissaoPorLote : 0), 0);
+  const receitaDireta = qtdDireta * precoDireta;
+  const receitaInvestidores = p.vendas.investidores.qtd * p.vendas.investidores.valorLote;
+  const investidoresNoResultado = !!p.vendas.investidores.considerarNoResultado;
+  const receitaTotal = receitaDireta + (investidoresNoResultado ? receitaInvestidores : 0);
+
+  const custoObraTotal = p.custos.reduce((s,c)=>s + (Number(c.valor)||0), 0);
+  const custoTerrenoCash = (Number(p.terreno.sinal)||0) + (Number(p.terreno.qtdParcelas)||0)*(Number(p.terreno.valorParcela)||0) + (Number(p.terreno.outrosCustos)||0);
+  const permutaConsiderada = p.terreno.considerarPermuta!==false;
+  const custoTerrenoTotal = custoTerrenoCash + (permutaConsiderada ? (Number(p.terreno.permuta)||0) : 0);
+
+  const custoTotal = custoTerrenoTotal + custoObraTotal;
+  const pctImposto = Number(p.fiscal.pctImposto)||0;
+  const impostosDireta = receitaDireta * pctImposto/100;
+  const impostosInvestidores = investidoresNoResultado ? receitaInvestidores * pctImposto/100 : 0;
+  const impostos = impostosDireta + impostosInvestidores;
+  const comissaoValor = comissaoPorLote * qtdDireta;
+  const resultado = receitaTotal - impostos - (comissaoAbatida?comissaoValor:0) - custoTotal;
+  const margem = receitaTotal>0 ? resultado/receitaTotal : 0;
+  const investimentoCash = custoTerrenoCash + custoObraTotal;
+  const roi = investimentoCash>0 ? resultado/investimentoCash : 0;
+  const custoLiquidoPorLote = lotesPropios>0 ? (custoTotal+impostos+(comissaoAbatida?comissaoValor:0))/lotesPropios : 0;
+
+  // fluxo de caixa mensal simplificado — só a venda direta tem cronograma de pagamento definido;
+  // a receita de investidores, mesmo quando considerada no resultado, não tem data de recebimento
+  // conhecida, então não entra no fluxo de caixa, VPL ou TIR.
+  const receitaLiquida = receitaDireta - impostosDireta - (comissaoAbatida?comissaoValor:0);
+  const fluxo = calcularFluxo(p, receitaLiquida, qtdDireta);
+  const terrenoForaDoFluxo = p.terreno.considerarCompraFluxo===false;
+  const picoAbs = Math.abs(fluxo.picoInvestimento) + (terrenoForaDoFluxo ? custoTerrenoCash : 0);
+  const roiPico = picoAbs>0 ? resultado/picoAbs : 0;
+
+  // retorno financeiro (VPL/TIR), considerando o dinheiro ao longo do tempo
+  const taxaDescontoMensal = (Number(p.financeiro && p.financeiro.taxaDescontoMensal)||0)/100;
+  const vpl = calcularVPL(fluxo.serie, taxaDescontoMensal);
+  const indiceLucratividade = calcularIndiceLucratividade(fluxo.serie, taxaDescontoMensal);
+  const tirMensal = calcularTIR(fluxo.serie);
+  const tirAnual = tirMensal!==null ? Math.pow(1+tirMensal,12)-1 : null;
+
+  // prazo total do projeto: da compra do terreno até o fim do fluxo de caixa
+  const dataCompraRef = new Date(p.terreno.dataCompra+'T00:00:00');
+  const dataFinalProjeto = fluxo.dataFinal;
+  const duracaoProjetoMeses = dataFinalProjeto ? monthsDiff(dataCompraRef, dataFinalProjeto) : 0;
+
+  return { lotesPropios, qtdDireta, precoDireta, comissaoPorLote, receitaDireta, receitaTotal, receitaInvestidores, investidoresNoResultado, permutaConsiderada,
+    custoObraTotal, custoTerrenoCash, custoTerrenoTotal, custoTotal, impostos, comissaoValor, comissaoAbatida,
+    resultado, margem, roi, roiPico, capitalPico: picoAbs, terrenoForaDoFluxo, custoLiquidoPorLote, investimentoCash, receitaLiquida,
+    taxaDescontoMensal, vpl, indiceLucratividade, tirMensal, tirAnual, dataFinalProjeto, duracaoProjetoMeses,
+    precoDiretaLiquido: qtdDireta>0 ? receitaLiquida/qtdDireta : 0, fluxo };
+}
+
+function monthKey(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); }
+
+function gerarParcelasComReajuste(saldoInicial, qtdParcelas, reajusteAnualPct){
+  const reajuste = (Number(reajusteAnualPct)||0)/100;
+  const parcelas = [];
+  let saldoRestante = saldoInicial;
+  let parcelasRestantes = qtdParcelas;
+  let parcelaAtual = parcelasRestantes>0 ? saldoRestante/parcelasRestantes : 0;
+  for(let mes=0; mes<qtdParcelas; mes++){
+    if(mes>0 && mes%12===0 && parcelasRestantes>0){
+      saldoRestante *= (1+reajuste);
+      parcelaAtual = saldoRestante/parcelasRestantes;
+    }
+    parcelas.push(parcelaAtual);
+    saldoRestante -= parcelaAtual;
+    parcelasRestantes -= 1;
+  }
+  return parcelas;
+}
+
+function calcularFluxo(p, receitaLiquidaTotal, qtdDireta){
+  const dCompra = new Date(p.terreno.dataCompra+'T00:00:00');
+  const dObra = new Date(p.obra.inicioObra+'T00:00:00');
+  const dVendas = new Date(p.vendas.inicioVendas+'T00:00:00');
+  const prazoObra = Math.max(Number(p.obra.prazoObraMeses)||1,1);
+  const qtdParcelasTerreno = Math.max(Number(p.terreno.qtdParcelas)||0,0);
+  const qtdParcelasVenda = Math.max(Number(p.vendas.condicao.qtdParcelas)||1,1);
+  const valorBalao = Number(p.vendas.condicao.valorBalao)||0;
+  const intervaloBalao = Math.max(Number(p.vendas.condicao.intervaloBalaoMeses)||0,0);
+  const entradaPct = Math.min(Math.max(Number(p.vendas.condicao.entradaPct)||0,0),100);
+  const entradaParcelas = Math.max(Number(p.vendas.condicao.entradaParcelas)||1,1);
+  const saldoModo = p.vendas.condicao.saldoModo || 'simultaneo';
+  const considerarCompraFluxo = p.terreno.considerarCompraFluxo!==false;
+  const custos = p.custos || [];
+  const investidoresNoFluxo = !!(p.vendas.investidores && p.vendas.investidores.considerarNoFluxo);
+  const dRecebimentoInvestidores = (investidoresNoFluxo && p.vendas.investidores.dataRecebimento) ? new Date(p.vendas.investidores.dataRecebimento+'T00:00:00') : null;
+  const valorRecebimentoInvestidores = investidoresNoFluxo ? (Number(p.vendas.investidores.qtd)||0) * (Number(p.vendas.investidores.valorLote)||0) : 0;
+
+  const previsao = (p.vendas.previsao && p.vendas.previsao.length) ? p.vendas.previsao : [qtdDireta];
+  const somaPrevisao = previsao.reduce((s,n)=>s+(Number(n)||0),0) || 1;
+  const netPerLot = receitaLiquidaTotal / somaPrevisao;
+  const nBaloes = (valorBalao>0 && intervaloBalao>0) ? Math.floor(qtdParcelasVenda/intervaloBalao) : 0;
+
+  const reajusteSaldoAnual = Number(p.vendas.condicao.reajusteSaldoAnual)||0;
+  const cohorts = previsao.map((qtyRaw,i)=>{
+    const qty = Number(qtyRaw)||0;
+    const dStart = addMonths(dVendas, i);
+    const receita = qty * netPerLot;
+    const entradaTotal = receita * entradaPct/100;
+    const saldoTotal = receita - entradaTotal;
+    const cohortBalao = valorBalao * (qty/somaPrevisao);
+    const baloesTotal = cohortBalao * nBaloes;
+    const entradaMensal = entradaTotal / entradaParcelas;
+    const parcelasArray = gerarParcelasComReajuste(Math.max(saldoTotal - baloesTotal, 0), qtdParcelasVenda, reajusteSaldoAnual);
+    const dSaldo = saldoModo==='apos_entrada' ? addMonths(dStart, entradaParcelas)
+      : saldoModo==='mes_seguinte' ? addMonths(dStart, 1)
+      : dStart;
+    return { qty, dStart, dSaldo, entradaMensal, parcelasArray, cohortBalao };
+  });
+
+  const fimObraPadrao = addMonths(dObra, prazoObra-1);
+  let fimObra = fimObraPadrao;
+  custos.forEach(c=>{
+    if(c.cronograma && c.cronograma.length){
+      const fimItem = addMonths(dObra, c.cronograma.length-1);
+      if(fimItem > fimObra) fimObra = fimItem;
+    }
+  });
+  const fimParcelasTerreno = qtdParcelasTerreno>0 ? addMonths(dCompra, qtdParcelasTerreno) : dCompra;
+  let fimVendasGeral = dVendas;
+  cohorts.forEach(c=>{
+    if(c.qty<=0) return;
+    fimVendasGeral = new Date(Math.max(fimVendasGeral, addMonths(c.dStart, entradaParcelas-1), addMonths(c.dSaldo, qtdParcelasVenda-1)));
+  });
+
+  let inicio = considerarCompraFluxo
+    ? new Date(Math.min(dCompra, dObra, dVendas))
+    : new Date(Math.min(dObra, dVendas));
+  if(dRecebimentoInvestidores && dRecebimentoInvestidores < inicio) inicio = dRecebimentoInvestidores;
+  let fim = considerarCompraFluxo
+    ? new Date(Math.max(fimObra, fimVendasGeral, fimParcelasTerreno))
+    : new Date(Math.max(fimObra, fimVendasGeral));
+  if(dRecebimentoInvestidores && dRecebimentoInvestidores > fim) fim = dRecebimentoInvestidores;
+  let nMeses = monthsDiff(inicio, fim) + 1;
+  nMeses = Math.min(Math.max(nMeses,1), 300);
+
+  const meses = [];
+  for(let i=0;i<nMeses;i++) meses.push(addMonths(inicio,i));
+
+  const serie = meses.map(m=>{
+    let saida = 0, entradaCaixa = 0;
+    const detEntradas = [], detSaidas = [];
+    const idxObraGlobal = monthsDiff(dObra, m);
+    custos.forEach(c=>{
+      const valor = Number(c.valor)||0;
+      let v = 0;
+      if(c.cronograma && c.cronograma.length){
+        if(idxObraGlobal>=0 && idxObraGlobal<c.cronograma.length) v = Number(c.cronograma[idxObraGlobal])||0;
+      } else {
+        if(idxObraGlobal>=0 && idxObraGlobal<prazoObra) v = valor/prazoObra;
+      }
+      if(v){ saida += v; detSaidas.push({label:c.item, valor:v}); }
+    });
+
+    cohorts.forEach(c=>{
+      if(c.qty<=0) return;
+      const mesVendaLabel = fmtMesAno(c.dStart);
+      const idxE = monthsDiff(c.dStart, m);
+      if(idxE>=0 && idxE<entradaParcelas && c.entradaMensal){
+        entradaCaixa += c.entradaMensal;
+        detEntradas.push({label:`Entrada — venda de ${mesVendaLabel}`, valor:c.entradaMensal});
+      }
+      const idxS = monthsDiff(c.dSaldo, m);
+      const parcelaDoMes = (idxS>=0 && idxS<c.parcelasArray.length) ? c.parcelasArray[idxS] : 0;
+      if(parcelaDoMes){
+        entradaCaixa += parcelaDoMes;
+        detEntradas.push({label:`Parcela do saldo — venda de ${mesVendaLabel}`, valor:parcelaDoMes});
+      }
+      if(intervaloBalao>0 && idxS>=0 && idxS<qtdParcelasVenda && (idxS+1)%intervaloBalao===0 && c.cohortBalao){
+        entradaCaixa += c.cohortBalao;
+        detEntradas.push({label:`Balão — venda de ${mesVendaLabel}`, valor:c.cohortBalao});
+      }
+    });
+
+    if(investidoresNoFluxo && dRecebimentoInvestidores && monthsDiff(dRecebimentoInvestidores, m)===0 && valorRecebimentoInvestidores){
+      entradaCaixa += valorRecebimentoInvestidores;
+      detEntradas.push({label:'Receita de investidores', valor:valorRecebimentoInvestidores});
+    }
+
+    if(considerarCompraFluxo){
+      if(monthsDiff(dCompra,m)===0){
+        const sinal = Number(p.terreno.sinal)||0;
+        const outros = Number(p.terreno.outrosCustos)||0;
+        if(sinal){ saida += sinal; detSaidas.push({label:'Sinal da compra do terreno', valor:sinal}); }
+        if(outros){ saida += outros; detSaidas.push({label:'Outros custos de aquisição', valor:outros}); }
+      }
+      const idxParcelaTerreno = monthsDiff(dCompra, m);
+      if(qtdParcelasTerreno>0 && idxParcelaTerreno>=1 && idxParcelaTerreno<=qtdParcelasTerreno){
+        const vp = Number(p.terreno.valorParcela)||0;
+        if(vp){ saida += vp; detSaidas.push({label:`Parcela da compra do terreno (${idxParcelaTerreno}/${qtdParcelasTerreno})`, valor:vp}); }
+      }
+    }
+    return { mes:m, entrada:entradaCaixa, saida, liquido: entradaCaixa-saida, detEntradas, detSaidas };
+  });
+
+  let acumulado = 0, pico = 0, picoIdx = 0, payback = null;
+  serie.forEach((s,i)=>{
+    acumulado += s.liquido;
+    s.acumulado = acumulado;
+    if(acumulado < pico){ pico = acumulado; picoIdx = i; }
+    if(payback===null && acumulado>=0 && i>0) payback = i;
+  });
+
+  return {
+    serie,
+    picoInvestimento: pico,
+    picoMes: serie.length ? serie[picoIdx].mes : null,
+    paybackMes: payback!==null ? serie[payback].mes : null,
+    dataFinal: fim
+  };
+}
+function addMonths(date,n){ const d=new Date(date); d.setMonth(d.getMonth()+n); return d; }
+function monthsDiff(a,b){ return (b.getFullYear()-a.getFullYear())*12 + (b.getMonth()-a.getMonth()); }
+
+function round2(v){ return Math.round((Number(v)||0)*100)/100; }
+function fmtMoneyInput(v){
+  return (Number(v)||0).toLocaleString('pt-BR',{minimumFractionDigits:2, maximumFractionDigits:2});
+}
+function parseMoneyBR(str){
+  if(str===undefined||str===null) return 0;
+  let s = String(str).trim();
+  if(s==='') return 0;
+  const neg = s.startsWith('-');
+  s = s.replace(/[^\d,]/g,'');
+  if(s==='') return 0;
+  const lastComma = s.lastIndexOf(',');
+  let result;
+  if(lastComma===-1){
+    result = parseFloat(s)||0;
+  } else {
+    const intPart = s.slice(0,lastComma).replace(/,/g,'');
+    const decPart = s.slice(lastComma+1);
+    result = parseFloat((intPart||'0')+'.'+(decPart||'0'))||0;
+  }
+  return neg ? -result : result;
+}
+function fmtBRL(v){
+  if(v===null||v===undefined||isNaN(v)) return 'R$ 0';
+  const neg = v<0;
+  const s = Math.abs(v).toLocaleString('pt-BR',{maximumFractionDigits:0});
+  return (neg?'-':'')+'R$ '+s;
+}
+function fmtPct(v){ return (v*100).toLocaleString('pt-BR',{maximumFractionDigits:1})+'%'; }
+function fmtMesAno(d){ const meses=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez']; return meses[d.getMonth()]+'/'+String(d.getFullYear()).slice(2); }
+function fmtDuracao(totalMeses){
+  totalMeses = Math.max(Math.round(totalMeses),0);
+  const anos = Math.floor(totalMeses/12);
+  const meses = totalMeses%12;
+  if(anos===0) return `${meses} ${meses===1?'mês':'meses'}`;
+  if(meses===0) return `${anos} ${anos===1?'ano':'anos'}`;
+  return `${anos} ${anos===1?'ano':'anos'} e ${meses} ${meses===1?'mês':'meses'}`;
+}
+
+/* ================= PERSISTÊNCIA ================= */
+const LIST_KEY = 'projetos:lista';
+async function carregarLista(){
+  try{ const r = await window.storage.get(LIST_KEY,false); return r ? JSON.parse(r.value) : []; }
+  catch(e){ return []; }
+}
+async function salvarLista(ids){ await window.storage.set(LIST_KEY, JSON.stringify(ids), false); }
+async function carregarProjeto(id){
+  try{ const r = await window.storage.get('projeto:'+id,false); return r ? normalizarProjeto(JSON.parse(r.value)) : null; }
+  catch(e){ return null; }
+}
+async function salvarProjeto(p){ await window.storage.set('projeto:'+p.id, JSON.stringify(p), false); }
+async function apagarProjeto(id){
+  try{ await window.storage.delete('projeto:'+id,false); }catch(e){}
+  const lista = await carregarLista();
+  await salvarLista(lista.filter(x=>x!==id));
+}
+
+/* ---- Exportar / importar projetos ---- */
+function slugify(s){
+  return String(s||'projeto').toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'') || 'projeto';
+}
+/* ---- Confirmação e aviso próprios (não dependem de confirm()/alert() do navegador,
+   que podem ser bloqueados dentro de iframes de pré-visualização) ---- */
+/* ---- Explicação e memória de cálculo dos indicadores ---- */
+function getInfoIndicador(chave, p, r){
+  const abatida = r.comissaoAbatida;
+  const mapa = {
+    resultado: {
+      titulo: 'Resultado líquido',
+      explicacao: 'É o lucro do projeto depois de descontar impostos, a comissão (quando marcada para abater) e todos os custos, da receita total.',
+      formula: 'Receita total − Impostos − Comissão (se abatida) − Custo total',
+      memoria: `${fmtBRL(r.receitaTotal)} − ${fmtBRL(r.impostos)} − ${fmtBRL(abatida?r.comissaoValor:0)} − ${fmtBRL(r.custoTotal)} = <strong>${fmtBRL(r.resultado)}</strong>`
+    },
+    receitaTotal: {
+      titulo: 'Receita total'+(r.investidoresNoResultado?' (venda direta + investidores)':' (venda direta)'),
+      explicacao: r.investidoresNoResultado
+        ? 'Soma o que os lotes vendidos diretamente geram com o que os lotes vendidos a investidores geram — a opção "Considerar no resultado" está marcada no bloco Investidores.'
+        : 'Soma de tudo que os lotes vendidos diretamente geram. Não inclui os lotes vendidos a investidores — dá pra mudar isso no bloco Investidores, dentro de Lotes do empreendimento.',
+      formula: r.investidoresNoResultado
+        ? '(Quantidade de lotes vendidos × Preço por lote) + (Lotes vendidos a investidores × Valor por lote)'
+        : 'Quantidade de lotes vendidos × Preço por lote',
+      memoria: r.investidoresNoResultado
+        ? `${r.qtdDireta} × ${fmtBRL(r.precoDireta)} + ${fmtBRL(r.receitaInvestidores)} = <strong>${fmtBRL(r.receitaTotal)}</strong>`
+        : `${r.qtdDireta} × ${fmtBRL(r.precoDireta)} = <strong>${fmtBRL(r.receitaDireta)}</strong>`
+    },
+    custoTerreno: {
+      titulo: 'Custo do terreno',
+      explicacao: `Tudo gasto para adquirir o terreno: sinal, parcelas e outros custos de aquisição${r.permutaConsiderada?', mais o valor da permuta.':'. A permuta está marcada para não entrar nesse cálculo.'}`,
+      formula: `Sinal + (Qtd. parcelas × valor da parcela) + outros custos${r.permutaConsiderada?' + permuta':''}`,
+      memoria: `${fmtBRL(p.terreno.sinal)} + (${p.terreno.qtdParcelas} × ${fmtBRL(p.terreno.valorParcela)}) + ${fmtBRL(p.terreno.outrosCustos)}${r.permutaConsiderada?` + ${fmtBRL(p.terreno.permuta)}`:''} = <strong>${fmtBRL(r.custoTerrenoTotal)}</strong>`
+    },
+    custoObra: {
+      titulo: 'Custo de obra',
+      explicacao: 'Soma de todos os itens lançados na tabela de custos de obra e infraestrutura, independente de como o desembolso deles está distribuído no cronograma.',
+      formula: 'Soma do valor de cada item de custo',
+      memoria: `${p.custos.length} itens somados = <strong>${fmtBRL(r.custoObraTotal)}</strong>`
+    },
+    impostos: {
+      titulo: 'Impostos sobre venda',
+      explicacao: r.investidoresNoResultado
+        ? 'Percentual de impostos aplicado sobre a receita da venda direta e, como a receita de investidores está marcada pra entrar no resultado, também sobre ela.'
+        : 'Percentual de impostos aplicado sobre a receita da venda direta.',
+      formula: r.investidoresNoResultado
+        ? '(Receita da venda direta × % de impostos) + (Receita de investidores × % de impostos)'
+        : 'Receita da venda direta × % de impostos',
+      memoria: r.investidoresNoResultado
+        ? `${fmtBRL(r.receitaDireta)} × ${p.fiscal.pctImposto}% + ${fmtBRL(r.receitaInvestidores)} × ${p.fiscal.pctImposto}% = <strong>${fmtBRL(r.impostos)}</strong>`
+        : `${fmtBRL(r.receitaDireta)} × ${p.fiscal.pctImposto}% = <strong>${fmtBRL(r.impostos)}</strong>`
+    },
+    comissao: {
+      titulo: 'Comissão',
+      explicacao: `Comissão sobre o valor estimado do lote, multiplicada pela quantidade de lotes vendidos diretamente. ${abatida?'Está marcada para abater do resultado.':'Está marcada como apenas informativa — não reduz o resultado.'}`,
+      formula: 'Valor estimado do lote × % de comissão × Qtd. lotes vendidos',
+      memoria: `${fmtBRL(p.comissao.valorLote)} × ${p.comissao.pct}% × ${r.qtdDireta} = <strong>${fmtBRL(r.comissaoValor)}</strong>`
+    },
+    custoTotal: {
+      titulo: 'Custo total',
+      explicacao: 'Soma do custo do terreno com o custo de obra — a base de custos usada para chegar no resultado.',
+      formula: 'Custo do terreno + Custo de obra',
+      memoria: `${fmtBRL(r.custoTerrenoTotal)} + ${fmtBRL(r.custoObraTotal)} = <strong>${fmtBRL(r.custoTotal)}</strong>`
+    },
+    margem: {
+      titulo: 'Margem líquida',
+      explicacao: 'Percentual do resultado líquido em relação à receita total — mostra quanto sobra de cada real vendido, depois de todos os custos.',
+      formula: 'Resultado líquido ÷ Receita total',
+      memoria: `${fmtBRL(r.resultado)} ÷ ${fmtBRL(r.receitaTotal)} = <strong>${fmtPct(r.margem)}</strong>`
+    },
+    roi: {
+      titulo: 'Retorno sobre caixa investido',
+      explicacao: 'Quanto o resultado representa sobre o total de dinheiro que sai do caixa da empresa (terreno + obra, sem a permuta). É um cálculo estático: soma tudo que sai de caixa do início ao fim do projeto, sem levar em conta que parte da obra pode ser bancada pelas receitas que já foram entrando. Para o valor de capital realmente necessário considerando esse cruzamento, veja o "Retorno sobre pico de investimento".',
+      formula: 'Resultado líquido ÷ Caixa investido (custo do terreno em caixa + custo de obra)',
+      memoria: `${fmtBRL(r.resultado)} ÷ ${fmtBRL(r.investimentoCash)} = <strong>${fmtPct(r.roi)}</strong>`
+    },
+    roiPico: {
+      titulo: 'Retorno sobre pico de investimento',
+      explicacao: 'Uma versão mais realista do retorno: em vez de dividir pelo total de dinheiro movimentado no projeto inteiro, divide pelo capital que de fato precisou estar disponível no pior momento — já descontando a receita que foi entrando ao longo do caminho e ajudando a bancar parte da obra.'
+        + (r.terrenoForaDoFluxo ? ' Como a compra do terreno está marcada para não entrar no fluxo de caixa, o valor em dinheiro dela (sinal, parcelas e outros custos) é somado de volta aqui, porque esse capital foi gasto de verdade, mesmo não aparecendo na simulação mês a mês.' : ''),
+      formula: r.terrenoForaDoFluxo
+        ? 'Resultado líquido ÷ (Pico de investimento em caixa, em módulo + custo do terreno em caixa)'
+        : 'Resultado líquido ÷ Pico de investimento em caixa (em módulo)',
+      memoria: r.terrenoForaDoFluxo
+        ? `${fmtBRL(r.resultado)} ÷ (${fmtBRL(Math.abs(r.fluxo.picoInvestimento))} + ${fmtBRL(r.custoTerrenoCash)}) = ${fmtBRL(r.resultado)} ÷ ${fmtBRL(r.capitalPico)} = <strong>${fmtPct(r.roiPico)}</strong>`
+        : `${fmtBRL(r.resultado)} ÷ ${fmtBRL(r.capitalPico)} = <strong>${fmtPct(r.roiPico)}</strong>`
+    },
+    custoLote: {
+      titulo: 'Custo líquido por lote próprio',
+      explicacao: 'Quanto cada lote próprio custa ao projeto, considerando custo total, impostos e a comissão (quando abatida), dividido pelos lotes que não foram dados em permuta.',
+      formula: '(Custo total + Impostos + Comissão abatida) ÷ Lotes próprios',
+      memoria: `(${fmtBRL(r.custoTotal)} + ${fmtBRL(r.impostos)} + ${fmtBRL(abatida?r.comissaoValor:0)}) ÷ ${r.lotesPropios} = <strong>${fmtBRL(r.custoLiquidoPorLote)}</strong>`
+    },
+    caixaInvestido: {
+      titulo: 'Caixa investido (fora permuta)',
+      explicacao: 'Soma de tudo que sai de fato do caixa da empresa: a parte em dinheiro da compra do terreno (sem a permuta) mais o custo de obra.',
+      formula: 'Custo do terreno em caixa + Custo de obra',
+      memoria: `${fmtBRL(r.custoTerrenoCash)} + ${fmtBRL(r.custoObraTotal)} = <strong>${fmtBRL(r.investimentoCash)}</strong>`
+    },
+    picoInvestimento: {
+      titulo: 'Pico de investimento em caixa',
+      explicacao: 'O menor saldo acumulado do fluxo de caixa mês a mês — mostra quanto dinheiro o projeto precisa ter disponível no pior momento, antes das entradas superarem as saídas, e em qual mês isso acontece.'
+        + (r.terrenoForaDoFluxo ? ' Atenção: a compra do terreno está marcada para não entrar no fluxo de caixa, então esse valor não inclui o dinheiro gasto com o terreno — o capital total necessário é maior. O "Retorno sobre pico de investimento" já soma essa diferença de volta.' : ''),
+      formula: 'Menor valor do saldo acumulado, olhando mês a mês toda a linha do tempo do fluxo de caixa',
+      memoria: `Menor saldo acumulado observado na simulação${r.fluxo.picoMes?`, em ${fmtMesAno(new Date(r.fluxo.picoMes))}`:''} = <strong>${fmtBRL(r.fluxo.picoInvestimento)}</strong>${r.terrenoForaDoFluxo?` <span class="badge warn" style="margin-left:4px;">Sem o terreno</span>`:''}`
+    },
+    inicioRetorno: {
+      titulo: 'Início do retorno',
+      explicacao: 'O primeiro mês em que o saldo acumulado do fluxo de caixa deixa de ser negativo — ou seja, quando as entradas já cobriram todo o dinheiro que saiu até ali. É o mês em que o projeto passa a "dar retorno" em termos de caixa.'
+        + (r.terrenoForaDoFluxo ? ' Atenção: como a compra do terreno está fora do fluxo de caixa simulado, esse mês não considera o dinheiro gasto com o terreno — na prática, o retorno tende a vir um pouco mais tarde do que o indicado aqui.' : ''),
+      formula: 'Primeiro mês em que o saldo acumulado do fluxo de caixa é maior ou igual a zero',
+      memoria: r.fluxo.paybackMes
+        ? `Saldo acumulado passa a ser positivo em <strong>${fmtMesAno(new Date(r.fluxo.paybackMes))}</strong>`
+        : `Dentro dos meses simulados, o saldo acumulado não chega a ficar positivo — o projeto ainda não teria recuperado o caixa investido no período considerado.`
+    },
+    vpl: {
+      titulo: 'VPL do projeto (Valor Presente Líquido)',
+      explicacao: `Compara o projeto com a alternativa de simplesmente deixar esse dinheiro rendendo a ${p.financeiro.taxaDescontoMensal}% ao mês, em vez de investir na obra. `
+        + (r.vpl>=0
+            ? `Como deu positivo, o projeto entrega <strong>${fmtBRL(r.vpl)} a mais</strong>, em dinheiro de hoje, do que se você tivesse deixado o dinheiro parado rendendo nessa taxa.`
+            : `Como deu negativo, o projeto entrega <strong>${fmtBRL(Math.abs(r.vpl))} a menos</strong>, em dinheiro de hoje, do que se você tivesse simplesmente deixado o dinheiro rendendo nessa taxa — financeiramente, teria sido melhor não fazer o projeto.`),
+      formula: 'Soma, mês a mês, de: fluxo líquido do mês ÷ (1 + taxa)^número do mês',
+      memoria: `Taxa de desconto: ${p.financeiro.taxaDescontoMensal}% ao mês, aplicada aos ${r.fluxo.serie.length} meses do fluxo de caixa = <strong>${fmtBRL(r.vpl)}</strong>`
+    },
+    indiceLucratividade: {
+      titulo: 'Índice de Lucratividade',
+      explicacao: r.indiceLucratividade!==null
+        ? `Mostra quanto o projeto devolve, em dinheiro de hoje, pra cada real que sai do caixa — também em dinheiro de hoje. Serve principalmente pra comparar projetos de tamanhos diferentes, já que o VPL sozinho favorece o projeto maior só por movimentar mais dinheiro. Aqui, pra cada R$ 1,00 investido, o projeto devolve <strong>${fmtBRL(r.indiceLucratividade)}</strong>${r.indiceLucratividade>=1?', ou seja, rende mais que a taxa de referência.':', ou seja, rende menos que simplesmente deixar o dinheiro na taxa de referência.'}`
+        : 'Não foi possível calcular — o fluxo de caixa não tem nenhuma saída registrada.',
+      formula: 'Valor presente de todas as entradas ÷ Valor presente de todas as saídas, usando a mesma taxa de desconto do VPL',
+      memoria: r.indiceLucratividade!==null
+        ? `Índice de 1,00 = empata com a taxa de referência. Acima de 1,00, o projeto rende mais. Valor calculado = <strong>${r.indiceLucratividade.toFixed(2)}</strong>`
+        : 'Sem saídas no fluxo de caixa para calcular a proporção.'
+    },
+    tirMensal: {
+      titulo: 'TIR mensal (Taxa Interna de Retorno)',
+      explicacao: r.tirMensal!==null
+        ? `É a taxa de retorno que o próprio projeto está pagando, mês a mês — como se fosse a taxa de juros de uma aplicação. Seu dinheiro investido está rendendo <strong>${fmtPct(r.tirMensal)} ao mês</strong> dentro do projeto`
+          + (r.tirMensal>=(Number(p.financeiro.taxaDescontoMensal)||0)/100
+              ? `, ou seja, <strong>${fmtPct(r.tirMensal - (Number(p.financeiro.taxaDescontoMensal)||0)/100)} a mais por mês</strong> do que se estivesse parado numa aplicação rendendo os ${p.financeiro.taxaDescontoMensal}% ao mês que você definiu como referência.`
+              : `, ou seja, <strong>${fmtPct(((Number(p.financeiro.taxaDescontoMensal)||0)/100) - r.tirMensal)} a menos por mês</strong> do que se estivesse parado numa aplicação rendendo os ${p.financeiro.taxaDescontoMensal}% ao mês que você definiu como referência — financeiramente, o projeto perde para essa alternativa.`)
+        : 'Não foi possível encontrar uma taxa que zere o VPL dentro da faixa testada — geralmente acontece quando o fluxo de caixa não tem um padrão claro de "sai dinheiro primeiro, entra depois".',
+      formula: 'Taxa "i" tal que a soma de fluxo líquido do mês ÷ (1+i)^mês seja igual a zero',
+      memoria: r.tirMensal!==null
+        ? `Taxa encontrada por tentativa (o VPL zera nesse ponto) = <strong>${fmtPct(r.tirMensal)}</strong> ao mês`
+        : `Não foi possível encontrar uma taxa que zere o VPL dentro da faixa testada.`
+    },
+    tirAnual: {
+      titulo: 'TIR anual',
+      explicacao: r.tirAnual!==null
+        ? `A mesma TIR mensal, só que convertida pra taxa anual — mais fácil de comparar com metas ou aplicações que costumam ser faladas "ao ano". No ritmo atual, seu dinheiro investido rende o equivalente a <strong>${fmtPct(r.tirAnual)} ao ano</strong> dentro do projeto.`
+        : 'A TIR mensal não foi encontrada, então não é possível converter para uma taxa anual.',
+      formula: '(1 + TIR mensal)^12 − 1',
+      memoria: r.tirAnual!==null
+        ? `(1 + ${fmtPct(r.tirMensal)})^12 − 1 = <strong>${fmtPct(r.tirAnual)}</strong>`
+        : `Não é possível calcular — a TIR mensal não foi encontrada.`
+    },
+    dataFinal: {
+      titulo: 'Data final do projeto',
+      explicacao: 'O último mês em que ainda há algum lançamento no fluxo de caixa — geralmente a última parcela do saldo do último lote vendido, mas também pode ser o fim da obra ou da compra do terreno, dependendo do que terminar depois. É o mês em que o projeto está totalmente encerrado financeiramente.',
+      formula: 'Data do último mês da simulação de fluxo de caixa (o mais tardio entre fim da obra, fim das vendas e fim das parcelas do terreno)',
+      memoria: r.dataFinalProjeto ? `Último mês com lançamento no fluxo de caixa = <strong>${fmtMesAno(new Date(r.dataFinalProjeto))}</strong>` : 'Não foi possível calcular.'
+    },
+    duracaoProjeto: {
+      titulo: 'Duração total do projeto',
+      explicacao: 'Quanto tempo passa entre a compra do terreno (o início de tudo) e o mês em que o projeto termina de gerar e receber dinheiro. Ajuda a ter noção do tamanho do compromisso — não só quanto o projeto rende, mas por quanto tempo o dinheiro fica envolvido nele.',
+      formula: 'Data final do projeto − Data da compra do terreno',
+      memoria: r.dataFinalProjeto
+        ? `De ${fmtMesAno(new Date(p.terreno.dataCompra+'T00:00:00'))} até ${fmtMesAno(new Date(r.dataFinalProjeto))} = <strong>${fmtDuracao(r.duracaoProjetoMeses)}</strong>`
+        : 'Não foi possível calcular.'
+    }
+  };
+  return mapa[chave];
+}
+function abrirInfoIndicador(chave){
+  const p = state.atual;
+  if(!p) return;
+  const r = calcular(p);
+  const info = getInfoIndicador(chave, p, r);
+  if(!info) return;
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.style.zIndex = '150';
+  overlay.innerHTML = `
+    <div class="modal-box" style="max-width:440px;position:relative;">
+      <div class="modal-header">
+        <h2 style="font-size:16px;">${escapeHtml(info.titulo)}</h2>
+        <button class="modal-close" data-fechar-info="1">✕</button>
+      </div>
+      <p style="font-size:13.5px;line-height:1.6;margin:0 0 14px;color:var(--ink);">${info.explicacao}</p>
+      <div class="info-label">Fórmula</div>
+      <div class="info-formula">${info.formula}</div>
+      <div class="info-label" style="margin-top:12px;">Memória de cálculo</div>
+      <div class="info-memoria">${info.memoria}</div>
+      <div style="display:flex;justify-content:flex-end;margin-top:18px;">
+        <button class="ghost" data-fechar-info="1">Fechar</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  overlay.querySelectorAll('[data-fechar-info]').forEach(el=>el.addEventListener('click', ()=>overlay.remove()));
+}
+
+
+function confirmarAcao(mensagem){
+  return new Promise(resolve=>{
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.style.zIndex = '200';
+    overlay.innerHTML = `
+      <div class="modal-box" style="max-width:380px;">
+        <p style="margin:0 0 18px;font-size:14px;line-height:1.5;">${escapeHtml(mensagem)}</p>
+        <div style="display:flex;justify-content:flex-end;gap:8px;">
+          <button class="ghost" data-confirmar-nao="1">Cancelar</button>
+          <button class="danger" data-confirmar-sim="1">Confirmar</button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+    function encerrar(resultado){ overlay.remove(); resolve(resultado); }
+    overlay.querySelector('[data-confirmar-sim]').addEventListener('click', ()=>encerrar(true));
+    overlay.querySelector('[data-confirmar-nao]').addEventListener('click', ()=>encerrar(false));
+  });
+}
+function mostrarAviso(mensagem, tipo){
+  tipo = tipo || 'info';
+  const cores = { info:['var(--steel)','var(--steel-light)'], sucesso:['var(--good)','var(--good-bg)'], erro:['var(--bad)','var(--bad-bg)'] };
+  const [cor, fundo] = cores[tipo] || cores.info;
+  const aviso = document.createElement('div');
+  aviso.style.cssText = `position:fixed;top:18px;left:50%;transform:translateX(-50%);z-index:300;
+    background:${fundo};color:${cor};border:1px solid ${cor};border-radius:8px;padding:12px 20px;
+    font-size:13.5px;font-weight:600;box-shadow:0 4px 16px rgba(0,0,0,0.15);max-width:90vw;text-align:center;`;
+  aviso.textContent = mensagem;
+  document.body.appendChild(aviso);
+  setTimeout(()=>{ aviso.style.transition='opacity .3s'; aviso.style.opacity='0'; setTimeout(()=>aviso.remove(), 300); }, 3200);
+}
+
+function baixarJSON(obj, filename){
+  const blob = new Blob([JSON.stringify(obj, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+function baixarHTML(htmlContent, filename){
+  const blob = new Blob([htmlContent], {type:'text/html'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+function exportarProjetoArquivo(p){
+  baixarJSON(p, `projeto-${slugify(p.nome)}.json`);
+}
+
+function abrirRelatorio(p){
+  const r = calcular(p);
+  const pos = r.resultado>=0;
+  const hoje = new Date().toLocaleDateString('pt-BR');
+  const dataCompraFmt = p.terreno.dataCompra ? new Date(p.terreno.dataCompra+'T00:00:00').toLocaleDateString('pt-BR') : '—';
+  const inicioObraFmt = p.obra.inicioObra ? new Date(p.obra.inicioObra+'T00:00:00').toLocaleDateString('pt-BR') : '—';
+  const inicioVendasFmt = p.vendas.inicioVendas ? new Date(p.vendas.inicioVendas+'T00:00:00').toLocaleDateString('pt-BR') : '—';
+  const chartSvg = renderChart(r.fluxo.serie);
+
+  const custosRows = p.custos.map(c=>`<tr><td>${escapeHtml(c.item)}</td><td class="num">${fmtBRL(c.valor)}</td></tr>`).join('');
+
+  const notasPorTopico = {};
+  (p.observacoesNotas||[]).forEach(n=>{
+    if(!notasPorTopico[n.topico]) notasPorTopico[n.topico] = [];
+    notasPorTopico[n.topico].push(n);
+  });
+  const notasHtml = Object.keys(notasPorTopico).length===0
+    ? '<p class="rel-vazio">Nenhuma observação registrada.</p>'
+    : Object.keys(notasPorTopico).map(topico=>`
+        <div class="rel-nota-grupo">
+          <div class="rel-nota-topico">${escapeHtml(topico)}</div>
+          ${notasPorTopico[topico].map(n=>`<p class="rel-nota-texto">${escapeHtml(n.texto)}</p>`).join('')}
+        </div>`).join('');
+
+  const html = `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Relatório — ${escapeHtml(p.nome)}</title>
+<style>
+  :root{
+    --paper:#F1EEE4; --paper-2:#E8E4D6; --ink:#1E2A30; --ink-soft:#4B5A60;
+    --line:#C9C2AC; --line-soft:#DAD5C4; --brick:#B14A28; --steel:#2E5266;
+    --good:#33684A; --good-bg:#DEEBE1; --bad:#9A3324; --bad-bg:#F3DED8;
+    --mono:'Courier New', Courier, monospace; --sans:-apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+    --disp: Georgia, 'Times New Roman', serif;
+  }
+  *{box-sizing:border-box;}
+  body{font-family:var(--sans);color:var(--ink);background:#fff;margin:0;padding:0;}
+  .rel-wrap{max-width:820px;margin:0 auto;padding:36px 40px 60px;}
+  .rel-toolbar{display:flex;justify-content:flex-end;gap:8px;padding:14px 40px;background:var(--paper-2);border-bottom:1px solid var(--line);}
+  .rel-toolbar button{
+    font-family:var(--sans);cursor:pointer;border:1.5px solid var(--ink);background:#fff;color:var(--ink);
+    padding:8px 16px;border-radius:6px;font-size:13px;font-weight:600;
+  }
+  .rel-toolbar button.primary{background:var(--brick);border-color:var(--brick);color:#fff;}
+  .rel-header{border-bottom:3px solid var(--ink);padding-bottom:16px;margin-bottom:24px;}
+  .rel-header h1{font-family:var(--disp);font-size:26px;margin:0 0 4px;}
+  .rel-header .rel-sub{font-family:var(--mono);font-size:11px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:1px;}
+  .rel-hero{
+    display:flex;justify-content:space-between;align-items:center;background:var(--paper-2);
+    border-radius:10px;padding:20px 24px;margin-bottom:28px;
+  }
+  .rel-hero .rel-hero-lbl{font-size:13px;color:var(--ink-soft);font-weight:600;}
+  .rel-hero .rel-hero-val{font-family:var(--mono);font-size:30px;font-weight:700;}
+  .pos{color:var(--good);} .neg{color:var(--bad);}
+  h2.rel-secao{
+    font-family:var(--mono);font-size:12px;text-transform:uppercase;letter-spacing:1.5px;color:var(--steel);
+    border-bottom:1px solid var(--line-soft);padding-bottom:6px;margin:28px 0 12px;
+  }
+  .rel-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px 20px;}
+  .rel-item{padding:8px 0;border-bottom:1px solid var(--line-soft);display:flex;justify-content:space-between;gap:10px;font-size:13px;}
+  .rel-item .l{color:var(--ink-soft);}
+  .rel-item .v{font-family:var(--mono);font-weight:700;text-align:right;}
+  table.rel-tabela{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:4px;}
+  table.rel-tabela th{text-align:left;font-family:var(--mono);font-size:10px;text-transform:uppercase;color:var(--ink-soft);border-bottom:1px solid var(--line);padding:6px 4px;}
+  table.rel-tabela td{padding:5px 4px;border-bottom:1px solid var(--line-soft);}
+  table.rel-tabela td.num{text-align:right;font-family:var(--mono);}
+  table.rel-tabela tr.total td{font-weight:700;border-top:2px solid var(--ink);border-bottom:none;}
+  .rel-nota-grupo{margin-bottom:14px;}
+  .rel-nota-topico{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--steel);margin-bottom:4px;}
+  .rel-nota-texto{font-size:13px;line-height:1.5;margin:0 0 6px;padding-left:10px;border-left:2px solid var(--line);}
+  .rel-vazio{font-size:13px;color:var(--ink-soft);font-style:italic;}
+  .rel-footer{margin-top:40px;padding-top:14px;border-top:1px solid var(--line-soft);font-size:11px;color:var(--ink-soft);}
+  @media print{
+    .rel-toolbar{display:none;}
+    .rel-wrap{padding:0;max-width:none;}
+    h2.rel-secao{break-after:avoid;}
+    .rel-item, .rel-nota-grupo{break-inside:avoid;}
+  }
+</style>
+</head>
+<body>
+<div class="rel-toolbar">
+  <button onclick="window.print()" class="primary">Imprimir / Salvar como PDF</button>
+</div>
+<div class="rel-wrap">
+
+  <div class="rel-header">
+    <h1>${escapeHtml(p.nome)}</h1>
+    <div class="rel-sub">Estudo de Viabilidade · gerado em ${hoje}</div>
+  </div>
+
+  <div class="rel-hero">
+    <span class="rel-hero-lbl">Resultado líquido</span>
+    <span class="rel-hero-val ${pos?'pos':'neg'}">${fmtBRL(r.resultado)}</span>
+  </div>
+
+  <h2 class="rel-secao">Resumo executivo</h2>
+  <div class="rel-grid">
+    <div class="rel-item"><span class="l">Receita total (venda direta)</span><span class="v">${fmtBRL(r.receitaTotal)}</span></div>
+    <div class="rel-item"><span class="l">Custo total</span><span class="v">${fmtBRL(r.custoTotal)}</span></div>
+    <div class="rel-item"><span class="l">Margem líquida</span><span class="v ${r.margem>=0?'pos':'neg'}">${fmtPct(r.margem)}</span></div>
+    <div class="rel-item"><span class="l">Retorno sobre caixa investido</span><span class="v ${r.roi>=0?'pos':'neg'}">${fmtPct(r.roi)}</span></div>
+    <div class="rel-item"><span class="l">Retorno sobre pico de investimento</span><span class="v ${r.roiPico>=0?'pos':'neg'}">${fmtPct(r.roiPico)}</span></div>
+    <div class="rel-item"><span class="l">Pico de investimento em caixa</span><span class="v neg">${fmtBRL(r.fluxo.picoInvestimento)}${r.fluxo.picoMes?` (${fmtMesAno(new Date(r.fluxo.picoMes))})`:''}</span></div>
+    <div class="rel-item"><span class="l">Início do retorno</span><span class="v ${r.fluxo.paybackMes?'pos':'neg'}">${r.fluxo.paybackMes?fmtMesAno(new Date(r.fluxo.paybackMes)):'Não atingido'}</span></div>
+    <div class="rel-item"><span class="l">VPL do projeto (${p.financeiro.taxaDescontoMensal}% a.m.)</span><span class="v ${r.vpl>=0?'pos':'neg'}">${fmtBRL(r.vpl)}</span></div>
+    <div class="rel-item"><span class="l">Índice de Lucratividade</span><span class="v ${r.indiceLucratividade!==null&&r.indiceLucratividade>=1?'pos':'neg'}">${r.indiceLucratividade!==null?r.indiceLucratividade.toFixed(2):'—'}</span></div>
+    <div class="rel-item"><span class="l">TIR mensal / anual</span><span class="v ${r.tirMensal!==null&&r.tirMensal>=0?'pos':'neg'}">${r.tirMensal!==null?`${fmtPct(r.tirMensal)} / ${fmtPct(r.tirAnual)}`:'Não encontrada'}</span></div>
+    <div class="rel-item"><span class="l">Data final do projeto</span><span class="v">${r.dataFinalProjeto?fmtMesAno(new Date(r.dataFinalProjeto)):'—'}</span></div>
+    <div class="rel-item"><span class="l">Duração total do projeto</span><span class="v">${fmtDuracao(r.duracaoProjetoMeses)}</span></div>
+  </div>
+
+  <h2 class="rel-secao">Terreno e condições de compra</h2>
+  <div class="rel-grid">
+    <div class="rel-item"><span class="l">Área do terreno</span><span class="v">${p.terreno.area.toLocaleString('pt-BR')} m²</span></div>
+    <div class="rel-item"><span class="l">Data da compra</span><span class="v">${dataCompraFmt}</span></div>
+    <div class="rel-item"><span class="l">Valor total da compra</span><span class="v">${fmtBRL(p.terreno.valorCompra)}</span></div>
+    <div class="rel-item"><span class="l">Sinal</span><span class="v">${fmtBRL(p.terreno.sinal)}</span></div>
+    <div class="rel-item"><span class="l">Parcelas</span><span class="v">${p.terreno.qtdParcelas}x de ${fmtBRL(p.terreno.valorParcela)}</span></div>
+    <div class="rel-item"><span class="l">Permuta</span><span class="v">${fmtBRL(p.terreno.permuta)}${r.permutaConsiderada?'':' (fora do resultado)'}</span></div>
+    <div class="rel-item"><span class="l">Outros custos de aquisição</span><span class="v">${fmtBRL(p.terreno.outrosCustos)}</span></div>
+    <div class="rel-item"><span class="l">Custo do terreno (total)</span><span class="v">${fmtBRL(r.custoTerrenoTotal)}</span></div>
+  </div>
+
+  <h2 class="rel-secao">Lotes e receita de vendas</h2>
+  <div class="rel-grid">
+    <div class="rel-item"><span class="l">Total de lotes do empreendimento</span><span class="v">${p.lotes.totalLotes}</span></div>
+    <div class="rel-item"><span class="l">Lotes dados em permuta</span><span class="v">${p.lotes.lotesPermuta}</span></div>
+    <div class="rel-item"><span class="l">Lotes próprios</span><span class="v">${r.lotesPropios}</span></div>
+    <div class="rel-item"><span class="l">Lotes vendidos diretamente</span><span class="v">${r.qtdDireta}</span></div>
+    <div class="rel-item"><span class="l">Preço por lote</span><span class="v">${fmtBRL(r.precoDireta)}</span></div>
+    <div class="rel-item"><span class="l">Início das vendas</span><span class="v">${inicioVendasFmt}</span></div>
+    <div class="rel-item"><span class="l">Entrada</span><span class="v">${p.vendas.condicao.entradaPct}% em ${p.vendas.condicao.entradaParcelas}x</span></div>
+    <div class="rel-item"><span class="l">Parcelas do saldo</span><span class="v">${p.vendas.condicao.qtdParcelas}x</span></div>
+    <div class="rel-item"><span class="l">Reajuste anual do saldo</span><span class="v">${p.vendas.condicao.reajusteSaldoAnual||0}% a.a.</span></div>
+    <div class="rel-item"><span class="l">Comissão sobre o lote</span><span class="v">${p.comissao.pct}%${r.comissaoAbatida?' (abatida)':' (informativa)'}</span></div>
+    <div class="rel-item"><span class="l">Impostos sobre vendas</span><span class="v">${p.fiscal.pctImposto}%</span></div>
+    <div class="rel-item"><span class="l">Lotes vendidos a investidores</span><span class="v">${p.vendas.investidores.qtd} — ${fmtBRL(r.receitaInvestidores)} (fora da receita)</span></div>
+  </div>
+
+  <h2 class="rel-secao">Custos de obra e infraestrutura</h2>
+  <table class="rel-tabela">
+    <tr><th>Item</th><th style="text-align:right">Valor</th></tr>
+    ${custosRows}
+    <tr class="total"><td>Custo total de obra</td><td class="num">${fmtBRL(r.custoObraTotal)}</td></tr>
+  </table>
+  <div class="rel-grid" style="margin-top:12px;">
+    <div class="rel-item"><span class="l">Início da obra</span><span class="v">${inicioObraFmt}</span></div>
+    <div class="rel-item"><span class="l">Prazo de obra</span><span class="v">${p.obra.prazoObraMeses} meses</span></div>
+  </div>
+
+  <h2 class="rel-secao">Fluxo de caixa mensal</h2>
+  ${chartSvg}
+
+  <h2 class="rel-secao">Observações do gestor</h2>
+  ${notasHtml}
+
+  <div class="rel-footer">Relatório gerado automaticamente pelo Estudo de Viabilidade em ${hoje}. Valores estimados, sujeitos a revisão.</div>
+</div>
+</body>
+</html>`;
+
+  baixarHTML(html, `relatorio-${slugify(p.nome)}.html`);
+  mostrarAviso('Relatório baixado. Abra o arquivo pra visualizar e usar o botão de imprimir/salvar em PDF.', 'sucesso');
+}
+
+function exportarTodosProjetos(){
+  const bundle = { tipo:'backup-estudo-de-viabilidade', versao:1, exportadoEm:new Date().toISOString(), projetos: state.projetos };
+  baixarJSON(bundle, `estudo-de-viabilidade-backup-${new Date().toISOString().slice(0,10)}.json`);
+}
+function projetoValido(obj){
+  return obj && typeof obj==='object' && obj.terreno && obj.custos && Array.isArray(obj.custos) && obj.vendas;
+}
+async function importarArquivo(file){
+  let data;
+  try{
+    const texto = await file.text();
+    data = JSON.parse(texto);
+  }catch(e){
+    mostrarAviso('Não foi possível ler o arquivo. Verifique se é um JSON válido exportado por este sistema.', 'erro');
+    return;
+  }
+  let candidatos;
+  if(Array.isArray(data)) candidatos = data;
+  else if(data && Array.isArray(data.projetos)) candidatos = data.projetos;
+  else if(projetoValido(data)) candidatos = [data];
+  else { mostrarAviso('Arquivo não reconhecido. Selecione um JSON exportado por este sistema (um projeto ou um backup).', 'erro'); return; }
+
+  let importados = 0;
+  for(const raw of candidatos){
+    if(!projetoValido(raw)) continue;
+    const novo = JSON.parse(JSON.stringify(raw));
+    novo.id = 'p_'+Date.now()+'_'+Math.random().toString(36).slice(2,7);
+    normalizarProjeto(novo);
+    state.projetos.push(novo);
+    await salvarProjeto(novo);
+    importados++;
+  }
+  if(importados===0){ mostrarAviso('Nenhum projeto válido encontrado no arquivo.', 'erro'); return; }
+  await salvarLista(state.projetos.map(x=>x.id));
+  render();
+  mostrarAviso(importados===1 ? '1 projeto importado com sucesso.' : importados+' projetos importados com sucesso.', 'sucesso');
+}
+
+/* ---- Cenários de previsão de vendas (reutilizáveis entre projetos) ---- */
+const CENARIOS_KEY = 'cenarios-vendas:lista';
+async function carregarListaCenarios(){
+  try{ const r = await window.storage.get(CENARIOS_KEY,false); return r ? JSON.parse(r.value) : []; }
+  catch(e){ return []; }
+}
+async function salvarListaCenarios(lista){ await window.storage.set(CENARIOS_KEY, JSON.stringify(lista), false); }
+async function carregarCenario(id){
+  try{ const r = await window.storage.get('cenario-vendas:'+id,false); return r ? JSON.parse(r.value) : null; }
+  catch(e){ return null; }
+}
+async function salvarCenarioStorage(cenario){ await window.storage.set('cenario-vendas:'+cenario.id, JSON.stringify(cenario), false); }
+async function apagarCenarioStorage(id){
+  try{ await window.storage.delete('cenario-vendas:'+id,false); }catch(e){}
+  const lista = await carregarListaCenarios();
+  await salvarListaCenarios(lista.filter(x=>x.id!==id));
+}
+
+/* ---- Cenários de cronograma de desembolso (reutilizáveis entre projetos) ---- */
+const CENARIOS_DESPESAS_KEY = 'cenarios-despesas:lista';
+async function carregarListaCenariosDespesas(){
+  try{ const r = await window.storage.get(CENARIOS_DESPESAS_KEY,false); return r ? JSON.parse(r.value) : []; }
+  catch(e){ return []; }
+}
+async function salvarListaCenariosDespesas(lista){ await window.storage.set(CENARIOS_DESPESAS_KEY, JSON.stringify(lista), false); }
+async function carregarCenarioDespesas(id){
+  try{ const r = await window.storage.get('cenario-despesas:'+id,false); return r ? JSON.parse(r.value) : null; }
+  catch(e){ return null; }
+}
+async function salvarCenarioDespesasStorage(cenario){ await window.storage.set('cenario-despesas:'+cenario.id, JSON.stringify(cenario), false); }
+async function apagarCenarioDespesasStorage(id){
+  try{ await window.storage.delete('cenario-despesas:'+id,false); }catch(e){}
+  const lista = await carregarListaCenariosDespesas();
+  await salvarListaCenariosDespesas(lista.filter(x=>x.id!==id));
+}
+
+/* ================= ESTADO / RENDER ================= */
+let state = { view:'lista', projetos:[], atual:null, loading:true };
+let projetosComparar = new Set();
+
+async function init(){
+  const ids = await carregarLista();
+  const projs = [];
+  for(const id of ids){ const p = await carregarProjeto(id); if(p) projs.push(p); }
+  if(projs.length===0){
+    const modelo = projetoModelo();
+    await salvarProjeto(modelo);
+    await salvarLista([modelo.id]);
+    projs.push(modelo);
+  }
+  state.projetos = projs;
+  state.loading = false;
+  render();
+}
+
+function render(){
+  const app = document.getElementById('app');
+  if(state.loading){ app.innerHTML = '<div class="wrap"><p style="padding:40px;text-align:center;color:var(--ink-soft)">Carregando…</p></div>'; return; }
+  app.innerHTML = state.view==='lista' ? renderLista()
+    : state.view==='fluxo' ? renderFluxoView(state.atual)
+    : state.view==='comparar' ? renderComparar()
+    : renderEditor(state.atual);
+  bindEvents();
+  garantirWidgetObservacoes();
+}
+
+let obsFiltroTopico = 'todos';
+
+function listaTopicosObservacao(p){
+  const fixos = [
+    'Terreno e condições de compra',
+    'Lotes do empreendimento',
+    'Comissão e impostos',
+    'Venda direta — Entrada',
+    'Venda direta — Saldo/parcelas',
+    'Venda direta — geral',
+    'Investidores',
+    'Previsão de vendas',
+    'Cronograma de desembolso',
+    'Fluxo de caixa — geral',
+    'Geral'
+  ];
+  const custosTopicos = (p.custos||[]).map(c=>`Custo: ${c.item}`);
+  return [...fixos, ...custosTopicos];
+}
+
+function garantirWidgetObservacoes(){
+  const mostrar = !!state.atual && (state.view==='editor' || state.view==='fluxo');
+  let widget = document.getElementById('obsWidget');
+
+  if(!mostrar){
+    if(widget) widget.style.display = 'none';
+    return;
+  }
+
+  if(!widget){
+    widget = document.createElement('div');
+    widget.id = 'obsWidget';
+    widget.innerHTML = `
+      <div class="obs-panel" id="obsPanel" style="display:none;">
+        <div class="obs-panel-header">
+          <span>Observações do projeto</span>
+          <button type="button" id="obsFechar" title="Fechar">✕</button>
+        </div>
+        <div id="obsFiltroWrap"></div>
+        <div id="obsLista" class="obs-lista"></div>
+        <div class="obs-novo">
+          <select id="obsNovoTopico"></select>
+          <textarea class="obs-textarea" id="obsNovoTexto" placeholder="Escreva a observação..." style="min-height:64px;"></textarea>
+          <button type="button" class="ghost small" id="obsAdicionar" style="width:100%;margin-top:6px;">+ Adicionar nota</button>
+        </div>
+      </div>
+      <button type="button" class="obs-fab" id="obsBotao">
+        <i class="obs-fab-icon">✎</i> Observações <span class="obs-badge" id="obsBadge" style="display:none;"></span>
+      </button>`;
+    document.body.appendChild(widget);
+
+    const painel = widget.querySelector('#obsPanel');
+    widget.querySelector('#obsBotao').addEventListener('click', ()=>{
+      const abrir = painel.style.display==='none';
+      painel.style.display = abrir ? 'block' : 'none';
+      if(abrir) renderObsPainel();
+    });
+    widget.querySelector('#obsFechar').addEventListener('click', ()=>{ painel.style.display = 'none'; });
+
+    widget.querySelector('#obsAdicionar').addEventListener('click', async ()=>{
+      const topicoSel = widget.querySelector('#obsNovoTopico');
+      const textoEl = widget.querySelector('#obsNovoTexto');
+      const texto = textoEl.value.trim();
+      if(!texto){ textoEl.style.borderColor = 'var(--bad)'; textoEl.placeholder = 'Escreva algo antes de adicionar'; return; }
+      if(!state.atual.observacoesNotas) state.atual.observacoesNotas = [];
+      state.atual.observacoesNotas.unshift({
+        id: 'n_'+Date.now()+'_'+Math.random().toString(36).slice(2,6),
+        texto, topico: topicoSel.value, criadoEm: new Date().toISOString()
+      });
+      await salvarProjeto(state.atual);
+      textoEl.value = '';
+      renderObsPainel();
+    });
+  }
+
+  widget.style.display = 'block';
+  const projetoId = state.atual ? state.atual.id : null;
+  if(widget.dataset.projetoId !== projetoId){
+    widget.dataset.projetoId = projetoId;
+    obsFiltroTopico = 'todos';
+    const painel = widget.querySelector('#obsPanel');
+    if(painel) painel.style.display = 'none';
+  }
+  renderObsPainel();
+  atualizarBadgeObs();
+}
+
+function renderObsPainel(){
+  const widget = document.getElementById('obsWidget');
+  if(!widget || !state.atual) return;
+  const p = state.atual;
+  const notas = p.observacoesNotas || [];
+  const topicosExistentes = [...new Set(notas.map(n=>n.topico))];
+
+  const filtroWrap = widget.querySelector('#obsFiltroWrap');
+  if(filtroWrap){
+    if(topicosExistentes.length===0){
+      filtroWrap.innerHTML = '';
+    } else {
+      filtroWrap.innerHTML = `<select id="obsFiltro" style="margin-bottom:8px;">
+        <option value="todos">Todos os tópicos (${notas.length})</option>
+        ${topicosExistentes.map(t=>`<option value="${escapeHtml(t)}" ${obsFiltroTopico===t?'selected':''}>${escapeHtml(t)} (${notas.filter(n=>n.topico===t).length})</option>`).join('')}
+      </select>`;
+      const filtroSel = filtroWrap.querySelector('#obsFiltro');
+      filtroSel.value = obsFiltroTopico;
+      filtroSel.addEventListener('change', ()=>{ obsFiltroTopico = filtroSel.value; renderObsPainel(); });
+    }
+  }
+
+  const listaEl = widget.querySelector('#obsLista');
+  if(listaEl){
+    const filtradas = obsFiltroTopico==='todos' ? notas : notas.filter(n=>n.topico===obsFiltroTopico);
+    listaEl.innerHTML = filtradas.length===0
+      ? `<div class="footnote" style="padding:6px 0;">${notas.length===0?'Nenhuma observação ainda.':'Nenhuma nota nesse tópico.'}</div>`
+      : filtradas.map(n=>`
+        <div class="obs-nota">
+          <div class="obs-nota-topo">
+            <span class="obs-nota-tag">${escapeHtml(n.topico)}</span>
+            <button type="button" class="obs-nota-del" data-obs-del="${n.id}" title="Excluir nota">✕</button>
+          </div>
+          <div class="obs-nota-texto">${escapeHtml(n.texto)}</div>
+        </div>`).join('');
+
+    listaEl.querySelectorAll('[data-obs-del]').forEach(btn=>{
+      btn.addEventListener('click', async ()=>{
+        const id = btn.getAttribute('data-obs-del');
+        state.atual.observacoesNotas = state.atual.observacoesNotas.filter(n=>n.id!==id);
+        await salvarProjeto(state.atual);
+        renderObsPainel();
+        atualizarBadgeObs();
+      });
+    });
+  }
+
+  const topicoSel = widget.querySelector('#obsNovoTopico');
+  if(topicoSel && topicoSel.dataset.projetoId !== p.id){
+    topicoSel.dataset.projetoId = p.id;
+    topicoSel.innerHTML = listaTopicosObservacao(p).map(t=>`<option value="${escapeHtml(t)}">${escapeHtml(t)}</option>`).join('');
+  }
+}
+
+function atualizarBadgeObs(){
+  const badge = document.getElementById('obsBadge');
+  if(!badge) return;
+  const qtd = state.atual && state.atual.observacoesNotas ? state.atual.observacoesNotas.length : 0;
+  badge.style.display = qtd>0 ? 'inline-block' : 'none';
+}
+
+function renderLista(){
+  const cards = state.projetos.map(p=>{
+    const r = calcular(p);
+    const pos = r.resultado>=0;
+    return `<div class="card-proj" data-open="${p.id}">
+      <button class="del" data-del="${p.id}" title="Excluir">✕</button>
+      <h3>${escapeHtml(p.nome)}</h3>
+      <div class="meta">${p.terreno.area.toLocaleString('pt-BR')} m² · ${p.lotes.totalLotes} lotes · margem ${fmtPct(r.margem)}</div>
+      <div class="res ${pos?'pos':'neg'}">${fmtBRL(r.resultado)}</div>
+      <button class="card-export" data-relatorio="${p.id}" title="Relatório" style="right:56px;">▤</button>
+      <button class="card-export" data-export="${p.id}" title="Exportar">⭳</button>
+      <label class="card-compare"><input type="checkbox" data-compare="${p.id}" ${projetosComparar.has(p.id)?'checked':''}> Comparar</label>
+    </div>`;
+  }).join('');
+
+  return `<div class="wrap">
+    <div class="hdr">
+      <div>
+        <h1>Estudo de Viabilidade</h1>
+        <div class="sub">Loteamentos e incorporações</div>
+      </div>
+      <div class="hdr-actions">
+        <button class="ghost" data-trocar-senha="1" title="Trocar senha">🔒</button>
+        <button class="ghost" data-logout="1" title="Sair">Sair</button>
+        <button class="ghost" data-import-trigger="1">Importar</button>
+        ${state.projetos.length>0 ? `<button class="ghost" data-export-all="1">Exportar tudo</button>` : ''}
+        <button class="primary" data-new="1">+ Novo projeto</button>
+      </div>
+    </div>
+    <input type="file" id="importInput" accept="application/json" style="display:none">
+    ${(()=>{ const validos = [...projetosComparar].filter(id=>state.projetos.some(p=>p.id===id)); return validos.length>=2 ? `
+      <div class="compare-bar">
+        <span>${validos.length} projetos selecionados para comparar</span>
+        <div style="display:flex;gap:8px;">
+          <button class="ghost small" data-compare-limpar="1">Limpar seleção</button>
+          <button class="primary" data-comparar-abrir="1">Comparar selecionados →</button>
+        </div>
+      </div>` : ''; })()}
+    ${state.projetos.length===0 ? `
+      <div class="empty-state">
+        <p>Nenhum projeto ainda. Crie um estudo para simular receita, custo e retorno de um empreendimento.</p>
+        <button class="primary" data-new="1">+ Novo projeto</button>
+      </div>` : `<div class="grid-list">${cards}</div>`
+    }
+  </div>`;
+}
+
+function melhorIndice(valores, direcao){
+  let melhorIdx = -1, melhorVal = null;
+  valores.forEach((v,i)=>{
+    if(v===null || v===undefined || isNaN(v)) return;
+    if(melhorVal===null || (direcao==='maior' ? v>melhorVal : v<melhorVal)){ melhorVal=v; melhorIdx=i; }
+  });
+  return melhorIdx;
+}
+
+function linhaComparar(label, chaveInfo, valores, fmtFn, direcao){
+  const idxMelhor = direcao ? melhorIndice(valores, direcao) : -1;
+  const celulas = valores.map((v,i)=>{
+    const destaque = i===idxMelhor && valores.filter(x=>x!==null&&x!==undefined&&!isNaN(x)).length>1;
+    return `<td class="${destaque?'compare-melhor':''}">${fmtFn(v)}${destaque?' <span class="compare-selo">melhor</span>':''}</td>`;
+  }).join('');
+  return `<tr><td class="compare-label">${chaveInfo?lblInfo(label,chaveInfo):label}</td>${celulas}</tr>`;
+}
+
+function renderComparar(){
+  const selecionados = [...projetosComparar]
+    .map(id=>state.projetos.find(p=>p.id===id))
+    .filter(Boolean)
+    .map(p=>({ p, r: calcular(p) }));
+
+  if(selecionados.length<2){
+    return `<div class="wrap">
+      <div class="toolbar"><button class="back" data-back="1">← Todos os projetos</button></div>
+      <p class="footnote" style="padding:20px 0;">Selecione pelo menos dois projetos na lista para comparar.</p>
+    </div>`;
+  }
+
+  const taxas = selecionados.map(x=>Number(x.p.financeiro.taxaDescontoMensal)||0);
+  const taxaMin = Math.min(...taxas), taxaMax = Math.max(...taxas);
+  const diffTaxa = taxaMax - taxaMin;
+  const alertaTaxa = diffTaxa >= 0.5;
+
+  const headerCols = selecionados.map(x=>`<th>${escapeHtml(x.p.nome)}</th>`).join('');
+
+  const linhas = [
+    linhaComparar('Taxa de desconto usada', null, selecionados.map(x=>x.p.financeiro.taxaDescontoMensal), v=>`${v}% a.m.`, null),
+    linhaComparar('Resultado líquido', 'resultado', selecionados.map(x=>x.r.resultado), fmtBRL, 'maior'),
+    linhaComparar('Margem líquida', 'margem', selecionados.map(x=>x.r.margem), fmtPct, 'maior'),
+    linhaComparar('Receita total', 'receitaTotal', selecionados.map(x=>x.r.receitaTotal), fmtBRL, 'maior'),
+    linhaComparar('Custo total', 'custoTotal', selecionados.map(x=>x.r.custoTotal), fmtBRL, 'menor'),
+    linhaComparar('Pico de investimento em caixa', 'picoInvestimento', selecionados.map(x=>x.r.fluxo.picoInvestimento), fmtBRL, 'maior'),
+    linhaComparar('Retorno sobre caixa investido', 'roi', selecionados.map(x=>x.r.roi), fmtPct, 'maior'),
+    linhaComparar('Retorno sobre pico de investimento', 'roiPico', selecionados.map(x=>x.r.roiPico), fmtPct, 'maior'),
+    linhaComparar('Índice de Lucratividade', 'indiceLucratividade', selecionados.map(x=>x.r.indiceLucratividade), v=>v!==null?v.toFixed(2):'—', 'maior'),
+    linhaComparar('VPL do projeto', 'vpl', selecionados.map(x=>x.r.vpl), fmtBRL, 'maior'),
+    linhaComparar('TIR mensal', 'tirMensal', selecionados.map(x=>x.r.tirMensal), v=>v!==null?fmtPct(v):'Não encontrada', 'maior'),
+    linhaComparar('TIR anual', 'tirAnual', selecionados.map(x=>x.r.tirAnual), v=>v!==null?fmtPct(v):'Não encontrada', 'maior'),
+    linhaComparar('Início do retorno', null, selecionados.map(x=>x.r.fluxo.paybackMes ? new Date(x.r.fluxo.paybackMes).getTime() : null), v=>v!==null?fmtMesAno(new Date(v)):'Não atingido', 'menor'),
+    linhaComparar('Duração total do projeto', null, selecionados.map(x=>x.r.duracaoProjetoMeses), fmtDuracao, 'menor'),
+  ];
+
+  return `<div class="wrap">
+    <div class="toolbar">
+      <button class="back" data-back="1">← Todos os projetos</button>
+    </div>
+    <input class="title-input" value="Comparativo de projetos" readonly style="border:none;cursor:default;">
+
+    ${alertaTaxa ? `
+      <div class="compare-alerta">
+        <strong>Atenção:</strong> os projetos selecionados usam taxas de desconto diferentes (de ${taxaMin}% a ${taxaMax}% ao mês). O VPL não é diretamente comparável entre eles nesse caso — compare pela TIR (que independe da taxa) ou ajuste as taxas de cada projeto pra ficarem iguais antes de comparar o VPL.
+      </div>` : ''}
+
+    <div class="compare-scroll">
+      <table class="compare-tabela">
+        <thead><tr><th></th>${headerCols}</tr></thead>
+        <tbody>${linhas.join('')}</tbody>
+      </table>
+    </div>
+    <div class="footnote" style="margin-top:12px;">As células marcadas "melhor" indicam o maior ou menor valor entre os projetos selecionados nesse indicador específico — não é um veredito geral. Um projeto pode vencer em retorno e perder em prazo, por exemplo.</div>
+  </div>`;
+}
+
+
+function renderFluxoView(p){
+  const r = calcular(p);
+  const chart = renderChart(r.fluxo.serie);
+  const temPrevisao = p.vendas.previsao && p.vendas.previsao.length>0;
+  const somaPrevisao = temPrevisao ? p.vendas.previsao.reduce((s,n)=>s+(Number(n)||0),0) : 0;
+  const custosComCronograma = p.custos.filter(c=>c.cronograma && c.cronograma.length>0).length;
+  return `<div class="wrap">
+    <div class="toolbar">
+      <button class="back" data-back-editor="1">← Voltar ao projeto</button>
+    </div>
+    <input class="title-input" value="${escapeHtml(p.nome)} — fluxo de caixa" readonly style="border:none;cursor:default;">
+
+    <div class="field-row" style="margin:18px 0;">
+      <div class="metric" style="background:var(--paper-2);border-radius:8px;padding:12px 14px;border-bottom:none;"><span class="lbl">Pico de investimento em caixa</span><span class="val neg">${fmtBRL(r.fluxo.picoInvestimento)}${r.fluxo.picoMes?` <span class="val-sub">(${fmtMesAno(new Date(r.fluxo.picoMes))})</span>`:''}</span></div>
+      <div class="metric" style="background:var(--paper-2);border-radius:8px;padding:12px 14px;border-bottom:none;"><span class="lbl">Início do retorno</span><span class="val ${r.fluxo.paybackMes?'pos':'neg'}">${r.fluxo.paybackMes?fmtMesAno(new Date(r.fluxo.paybackMes)):'Não atingido'}</span></div>
+      <div class="metric" style="background:var(--paper-2);border-radius:8px;padding:12px 14px;border-bottom:none;"><span class="lbl">Data final do projeto</span><span class="val">${r.dataFinalProjeto?fmtMesAno(new Date(r.dataFinalProjeto)):'—'}<span class="val-sub"> (${fmtDuracao(r.duracaoProjetoMeses)})</span></span></div>
+      <div class="metric" style="background:var(--paper-2);border-radius:8px;padding:12px 14px;border-bottom:none;"><span class="lbl">Resultado líquido projetado</span><span class="val ${r.resultado>=0?'pos':'neg'}">${fmtBRL(r.resultado)}</span></div>
+    </div>
+
+    <section class="panel">
+      <h2>Retorno financeiro (VPL e TIR)</h2>
+      <div class="field-row">
+        <div class="field"><label>Taxa de desconto mensal (%)</label><input type="number" step="0.01" data-f="financeiro.taxaDescontoMensal" value="${p.financeiro.taxaDescontoMensal}"></div>
+      </div>
+      <div class="field-row" style="margin-top:12px;">
+        <div class="metric" style="background:var(--paper-2);border-radius:8px;padding:12px 14px;border-bottom:none;"><span class="lbl">${lblInfo('VPL do projeto','vpl')}</span><span class="val ${r.vpl>=0?'pos':'neg'}" data-vpl-valor>${fmtBRL(r.vpl)}</span></div>
+        <div class="metric" style="background:var(--paper-2);border-radius:8px;padding:12px 14px;border-bottom:none;"><span class="lbl">${lblInfo('Índice de Lucratividade','indiceLucratividade')}</span><span class="val ${r.indiceLucratividade!==null&&r.indiceLucratividade>=1?'pos':'neg'}" data-il-valor>${r.indiceLucratividade!==null?r.indiceLucratividade.toFixed(2):'—'}</span></div>
+        <div class="metric" style="background:var(--paper-2);border-radius:8px;padding:12px 14px;border-bottom:none;"><span class="lbl">${lblInfo('TIR mensal','tirMensal')}</span><span class="val ${r.tirMensal!==null&&r.tirMensal>=0?'pos':'neg'}" data-tir-mensal-valor>${r.tirMensal!==null?fmtPct(r.tirMensal):'Não encontrada'}</span></div>
+        <div class="metric" style="background:var(--paper-2);border-radius:8px;padding:12px 14px;border-bottom:none;"><span class="lbl">${lblInfo('TIR anual','tirAnual')}</span><span class="val ${r.tirAnual!==null&&r.tirAnual>=0?'pos':'neg'}" data-tir-anual-valor>${r.tirAnual!==null?fmtPct(r.tirAnual):'Não encontrada'}</span></div>
+      </div>
+      <div class="footnote" style="margin-top:10px;">VPL traz cada mês do fluxo de caixa a valor de hoje, usando a taxa acima. TIR é a taxa que faria o VPL ser exatamente zero — compare com a taxa mínima que você exige para saber se o projeto vale a pena.</div>
+    </section>
+
+    <section class="panel">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:2px;">
+        <h2 style="margin:0;border:none;padding:0;">Fluxo de caixa mensal estimado</h2>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn-receita" data-abrir-previsao="1">Previsão de vendas</button>
+          <button class="btn-despesa" data-abrir-cronograma="1">Cronograma de desembolso</button>
+        </div>
+      </div>
+      <div class="hint" style="margin-bottom:6px;">
+        ${temPrevisao
+          ? `Previsão mês a mês ativa: <strong>${somaPrevisao}</strong> de <strong>${r.qtdDireta}</strong> lotes distribuídos ao longo de ${p.vendas.previsao.length} meses. ${somaPrevisao!==r.qtdDireta?'<span class="badge warn" style="margin-left:6px;">Soma diferente do total de lotes</span>':'<span class="badge good" style="margin-left:6px;">Soma bate com o total</span>'}`
+          : `Sem previsão detalhada: o sistema está considerando todos os ${r.qtdDireta} lotes vendidos de uma vez, no início das vendas.`}
+      </div>
+      <div class="hint" style="margin-bottom:12px;">
+        ${custosComCronograma>0
+          ? `Cronograma de desembolso ativo em <strong>${custosComCronograma}</strong> de ${p.custos.length} itens de obra. Os demais continuam com distribuição linear pelo prazo de obra.`
+          : `Sem cronograma detalhado: os custos de obra estão sendo distribuídos linearmente pelo prazo de obra.`}
+      </div>
+      <div class="chart-legend">
+        <span><i style="background:var(--steel)"></i>Receita</span>
+        <span><i style="background:var(--brick)"></i>Custo</span>
+        <span><i style="background:var(--ink)"></i>Saldo acumulado</span>
+      </div>
+      <div class="chart-wrap">${chart}</div>
+      <button class="ghost small" style="margin-top:10px;" data-toggle-tabela="1">${tabelaFluxoAberta?'Ocultar lançamentos mês a mês':'Ver lançamentos mês a mês'}</button>
+      <div class="fluxo-table-wrap" style="display:${tabelaFluxoAberta?'block':'none'};margin-top:10px;">${renderTabelaFluxo(r.fluxo.serie)}</div>
+      <div class="footnote">Custos de obra distribuídos linearmente pelo prazo de obra; receita líquida distribuída linearmente pelo prazo de vendas. Aproximação para especulação inicial, não substitui um cronograma físico-financeiro detalhado.</div>
+    </section>
+  </div>`;
+}
+
+function renderEditor(p){
+  const r = calcular(p);
+  const pos = r.resultado>=0;
+  const lotesPropios = r.lotesPropios;
+  const custosRows = p.custos.map((c,i)=>`
+    <tr>
+      <td><input data-costfield="item" data-idx="${i}" value="${escapeHtml(c.item)}"></td>
+      <td class="val"><input data-costfield="valor" data-idx="${i}" type="text" inputmode="decimal" class="money-in" value="${fmtMoneyInput(c.valor)}"></td>
+      <td class="rm"><button data-rmrow="${i}" title="Remover">✕</button></td>
+    </tr>`).join('');
+
+  return `<div class="wrap">
+    <div class="toolbar">
+      <button class="back" data-back="1">← Todos os projetos</button>
+      <div style="display:flex;gap:8px;">
+        <button data-recolher-tudo="1" class="ghost">Recolher tudo</button>
+        <button data-expandir-tudo="1" class="ghost">Expandir tudo</button>
+        <button data-relatorio="${p.id}" class="ghost">Relatório</button>
+        <button data-export="${p.id}" class="ghost">Exportar</button>
+        <button data-dup="1" class="ghost">Duplicar</button>
+        <button data-del-current="1" class="danger">Excluir</button>
+      </div>
+    </div>
+    <input class="title-input" id="titleInput" value="${escapeHtml(p.nome)}">
+
+    <div class="layout" style="margin-top:18px;">
+      <div>
+
+        <section class="panel ${paineisColapsados['terreno']?'collapsed':''}" id="painel-terreno">
+          <h2 class="panel-h" data-panel-id="terreno">Terreno e condições de compra <i class="chevron">▾</i></h2>
+          <div class="field-row">
+            <div class="field"><label>Área do terreno (m²)</label><input type="number" data-f="terreno.area" value="${p.terreno.area}"></div>
+            <div class="field"><label>Data da compra</label><input type="date" data-f="terreno.dataCompra" value="${p.terreno.dataCompra}"></div>
+          </div>
+
+          <div class="field-row" style="margin-top:10px;">
+            <div class="field">
+              <label>Como calcular a compra</label>
+              <select data-select="terreno.modo">
+                <option value="auto_parcela" ${p.terreno.modo==='auto_parcela'?'selected':''}>Eu informo o total, sistema calcula a parcela</option>
+                <option value="auto_total" ${p.terreno.modo==='auto_total'?'selected':''}>Eu informo a parcela, sistema soma o total</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="field-row" style="margin-top:10px;">
+            <div class="field">
+              <label>Valor total da compra (R$)${p.terreno.modo==='auto_total'?' — calculado':''}</label>
+              <input type="text" inputmode="decimal" class="money-in ${p.terreno.modo==='auto_total'?'calc':''}" data-f="terreno.valorCompra" value="${fmtMoneyInput(p.terreno.valorCompra)}" ${p.terreno.modo==='auto_total'?'readonly':''}>
+            </div>
+            <div class="field"><label>Sinal, à vista (R$)</label><input type="text" inputmode="decimal" class="money-in" data-f="terreno.sinal" value="${fmtMoneyInput(p.terreno.sinal)}"></div>
+            <div class="field"><label>Qtd. parcelas</label><input type="number" data-f="terreno.qtdParcelas" value="${p.terreno.qtdParcelas}"></div>
+            <div class="field">
+              <label>Valor de cada parcela (R$)${p.terreno.modo==='auto_parcela'?' — calculado':''}</label>
+              <input type="text" inputmode="decimal" class="money-in ${p.terreno.modo==='auto_parcela'?'calc':''}" data-f="terreno.valorParcela" value="${fmtMoneyInput(p.terreno.valorParcela)}" ${p.terreno.modo==='auto_parcela'?'readonly':''}>
+            </div>
+            <div class="field"><label>Permuta, em lotes (R$)</label><input type="text" inputmode="decimal" class="money-in" data-f="terreno.permuta" value="${fmtMoneyInput(p.terreno.permuta)}"></div>
+            <div class="field"><label>Outros custos de aquisição (R$)</label><input type="text" inputmode="decimal" class="money-in" data-f="terreno.outrosCustos" value="${fmtMoneyInput(p.terreno.outrosCustos)}"></div>
+          </div>
+          <div class="field-row" style="margin-top:10px;">
+            <div class="field">
+              <label>Permuta no resultado</label>
+              <select data-select="terreno.considerarPermuta" data-booltype="1">
+                <option value="true" ${p.terreno.considerarPermuta!==false?'selected':''}>Considerar a permuta no resultado</option>
+                <option value="false" ${p.terreno.considerarPermuta===false?'selected':''}>Não considerar a permuta</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Compra no fluxo de caixa</label>
+              <select data-select="terreno.considerarCompraFluxo" data-booltype="1">
+                <option value="true" ${p.terreno.considerarCompraFluxo!==false?'selected':''}>Considerar a compra no fluxo de caixa</option>
+                <option value="false" ${p.terreno.considerarCompraFluxo===false?'selected':''}>Não considerar no fluxo</option>
+              </select>
+            </div>
+          </div>
+          <div class="footnote" style="margin-top:8px;">Sinal, parcelas e outros custos ${p.terreno.considerarCompraFluxo!==false?'entram no fluxo de caixa':'estão fora do fluxo de caixa, mas continuam no custo total e no resultado'}. A permuta é paga em lotes e não consome caixa${p.terreno.considerarPermuta!==false?', mas reduz o resultado.':'. Desmarcada, ela fica de fora do custo do terreno e não afeta o resultado.'}</div>
+        </section>
+
+        <section class="panel ${paineisColapsados['lotes']?'collapsed':''}" id="painel-lotes">
+          <h2 class="panel-h" data-panel-id="lotes">Lotes do empreendimento <i class="chevron">▾</i></h2>
+          <div class="field-row">
+            <div class="field"><label>Total de lotes do empreendimento</label><input type="number" data-f="lotes.totalLotes" value="${p.lotes.totalLotes}"></div>
+            <div class="field"><label>Lotes dados em permuta</label><input type="number" data-f="lotes.lotesPermuta" value="${p.lotes.lotesPermuta}"></div>
+          </div>
+          <div class="hint hint-lotes">Lotes próprios restantes para venda: <strong>${lotesPropios}</strong></div>
+
+          <div class="subhead">Investidores</div>
+          <div class="field-row">
+            <div class="field"><label>Qtd. lotes vendidos a investidores</label><input type="number" data-f="vendas.investidores.qtd" value="${p.vendas.investidores.qtd}"></div>
+            <div class="field"><label>Valor por lote vendido (R$)</label><input type="text" inputmode="decimal" class="money-in" data-f="vendas.investidores.valorLote" value="${fmtMoneyInput(p.vendas.investidores.valorLote)}"></div>
+            <div class="field">
+              <label>Receita de investidores no resultado</label>
+              <select data-select="vendas.investidores.considerarNoResultado" data-booltype="1">
+                <option value="false" ${!p.vendas.investidores.considerarNoResultado?'selected':''}>Não considerar (fica de fora)</option>
+                <option value="true" ${p.vendas.investidores.considerarNoResultado?'selected':''}>Considerar no resultado do projeto</option>
+              </select>
+            </div>
+          </div>
+          <div class="field-row" style="margin-top:8px;">
+            <div class="field">
+              <label>Receita de investidores no fluxo de caixa</label>
+              <select data-select="vendas.investidores.considerarNoFluxo" data-booltype="1">
+                <option value="false" ${!p.vendas.investidores.considerarNoFluxo?'selected':''}>Não considerar</option>
+                <option value="true" ${p.vendas.investidores.considerarNoFluxo?'selected':''}>Considerar no fluxo de caixa</option>
+              </select>
+            </div>
+            <div class="field"><label>Data de recebimento</label><input type="date" data-f="vendas.investidores.dataRecebimento" value="${p.vendas.investidores.dataRecebimento}"></div>
+          </div>
+          <div class="hint hint-investidores">Valor movimentado com investidores: <strong>${fmtBRL(r.receitaInvestidores)}</strong> ${r.investidoresNoResultado ? `<span class="badge good" style="margin-left:6px;">Somando à receita do projeto</span>` : `<span class="badge warn" style="margin-left:6px;">Não soma à receita do projeto</span>`} ${p.vendas.investidores.considerarNoFluxo ? `<span class="badge good" style="margin-left:6px;">No fluxo de caixa</span>` : `<span class="badge warn" style="margin-left:6px;">Fora do fluxo de caixa</span>`}</div>
+          ${r.investidoresNoResultado && !p.vendas.investidores.considerarNoFluxo ? `<div class="footnote">Essa receita entra na Receita total, na Margem e no Resultado, mas não aparece no fluxo de caixa, VPL ou TIR — marque "Considerar no fluxo de caixa" acima e informe a data se quiser incluí-la lá também, como um recebimento único naquele mês.</div>` : ''}
+          ${p.vendas.investidores.considerarNoFluxo ? `<div class="footnote">O valor movimentado com investidores entra como um recebimento único no mês informado, somando ao fluxo de caixa, ao VPL e à TIR — independente da opção de considerar ou não no resultado nominal.</div>` : ''}
+        </section>
+
+        <section class="panel ${paineisColapsados['comissao']?'collapsed':''}" id="painel-comissao">
+          <h2 class="panel-h" data-panel-id="comissao">Comissão e impostos sobre a venda <i class="chevron">▾</i></h2>
+          <div class="field-row">
+            <div class="field"><label>Valor estimado de venda por lote (R$)</label><input type="text" inputmode="decimal" class="money-in" data-f="comissao.valorLote" value="${fmtMoneyInput(p.comissao.valorLote)}"></div>
+            <div class="field"><label>Comissão sobre o valor do lote (%)</label><input type="number" step="0.01" data-f="comissao.pct" value="${p.comissao.pct}"></div>
+            <div class="field"><label>Impostos sobre vendas (%)</label><input type="number" step="0.01" data-f="fiscal.pctImposto" value="${p.fiscal.pctImposto}"></div>
+          </div>
+          <div class="field-row" style="margin-top:6px;">
+            <div class="field">
+              <label>Comissão no resultado</label>
+              <select data-select="comissao.abaterReceita" data-booltype="1">
+                <option value="true" ${p.comissao.abaterReceita?'selected':''}>Abater a comissão da receita da empresa</option>
+                <option value="false" ${!p.comissao.abaterReceita?'selected':''}>Não abater (só informativa)</option>
+              </select>
+            </div>
+          </div>
+          <div class="hint hint-comissao">Comissão por lote: <strong>${fmtBRL(r.comissaoPorLote)}</strong> · total sobre ${r.qtdDireta} lotes: <strong>${fmtBRL(r.comissaoValor)}</strong>
+            ${r.comissaoAbatida ? `<span class="badge bad" style="margin-left:6px;">Abatida do resultado</span>` : `<span class="badge warn" style="margin-left:6px;">Apenas informativa</span>`}
+          </div>
+        </section>
+
+        <section class="panel ${paineisColapsados['venda']?'collapsed':''}" id="painel-venda">
+          <h2 class="panel-h" data-panel-id="venda">Venda direta — receita do projeto <i class="chevron">▾</i></h2>
+          <div class="field-row">
+            <div class="field"><label>Qtd. lotes vendidos — calculado</label><input type="number" value="${r.qtdDireta}" readonly class="calc"></div>
+            <div class="field"><label>Preço por lote (R$) — calculado</label><input type="text" class="money-in calc" value="${fmtMoneyInput(r.precoDireta)}" readonly></div>
+          </div>
+          <div class="metric-inline">Receita total do projeto <strong class="${r.receitaDireta>=0?'pos':'neg'}">${fmtBRL(r.receitaDireta)}</strong></div>
+          <div class="footnote">Quantidade = total de lotes − lotes de permuta − lotes vendidos a investidores. Preço = valor estimado de venda por lote${r.comissaoAbatida?' menos a comissão do lote (marcada para abater)':''}.</div>
+
+          <div class="field-row" style="margin-top:14px;">
+            <div class="field"><label>Início das vendas</label><input type="date" data-f="vendas.inicioVendas" value="${p.vendas.inicioVendas}"></div>
+            <div class="field"><label>Entrada (%) do valor do lote</label><input type="number" step="0.01" data-f="vendas.condicao.entradaPct" value="${p.vendas.condicao.entradaPct}"></div>
+            <div class="field"><label>Entrada paga em quantas parcelas</label><input type="number" data-f="vendas.condicao.entradaParcelas" value="${p.vendas.condicao.entradaParcelas}"></div>
+          </div>
+          <div class="hint hint-entrada">${hintEntradaHTML(p, r)}</div>
+
+          <div class="field-row" style="margin-top:10px;">
+            <div class="field wide">
+              <label>Início do pagamento do saldo</label>
+              <select data-select="vendas.condicao.saldoModo">
+                <option value="simultaneo" ${(p.vendas.condicao.saldoModo||'simultaneo')==='simultaneo'?'selected':''}>1ª parcela do saldo junto com a 1ª parcela da entrada</option>
+                <option value="mes_seguinte" ${p.vendas.condicao.saldoModo==='mes_seguinte'?'selected':''}>1ª parcela do saldo um mês após a 1ª parcela da entrada</option>
+                <option value="apos_entrada" ${p.vendas.condicao.saldoModo==='apos_entrada'?'selected':''}>1ª parcela do saldo só após quitar toda a entrada</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="field-row" style="margin-top:10px;">
+            <div class="field"><label>Parcelas do saldo restante</label><input type="number" data-f="vendas.condicao.qtdParcelas" value="${p.vendas.condicao.qtdParcelas}"></div>
+            <div class="field"><label>Valor de cada balão (R$)</label><input type="text" inputmode="decimal" class="money-in" data-f="vendas.condicao.valorBalao" value="${fmtMoneyInput(p.vendas.condicao.valorBalao)}"></div>
+            <div class="field"><label>Balão a cada quantos meses</label><input type="number" data-f="vendas.condicao.intervaloBalaoMeses" value="${p.vendas.condicao.intervaloBalaoMeses}"></div>
+            <div class="field"><label>Reajuste anual do saldo (%)</label><input type="number" step="0.01" data-f="vendas.condicao.reajusteSaldoAnual" value="${p.vendas.condicao.reajusteSaldoAnual}"></div>
+          </div>
+          <div class="field wide" style="margin-top:8px;">
+            <label>Outras condições da venda</label>
+            <input type="text" data-f="vendas.condicao.outros" value="${escapeHtml(p.vendas.condicao.outros)}" placeholder="Ex.: reforço na entrega das chaves, desconto à vista">
+          </div>
+          <div class="footnote">A entrada é recebida logo no início das vendas (à vista, se em 1 parcela). O saldo restante começa a ser pago conforme a opção escolhida acima, dividido pelas parcelas mensais, com balões somando por cima quando houver.${(Number(p.vendas.condicao.reajusteSaldoAnual)||0)>0?` A cada 12 parcelas, o saldo devedor ainda não pago é corrigido em ${p.vendas.condicao.reajusteSaldoAnual}% e as parcelas seguintes sobem de valor — a quantidade de parcelas continua a mesma. Isso entra no fluxo de caixa, VPL e TIR, mas não muda a receita total nem o resultado nominal.`:' O campo de reajuste anual permite simular a correção do saldo devedor por índice (INCC, IGP-M, IPCA), comum em contratos de venda parcelada.'} O campo "outras condições" é só anotação, não altera o cálculo.</div>
+
+          <button class="btn-receita" style="margin-top:14px;" data-abrir-previsao="1">Definir previsão de vendas mês a mês →</button>
+        </section>
+
+        <section class="panel ${paineisColapsados['custos']?'collapsed':''}" id="painel-custos">
+          <h2 class="panel-h" data-panel-id="custos">Custos de obra e infraestrutura <i class="chevron">▾</i></h2>
+          <button class="btn-estimativa" data-abrir-estimativa="1">Gerar orçamento estimado a partir da área →</button>
+          <table class="costs" style="margin-top:12px;">
+            <tr><th>Item</th><th style="text-align:right">Valor (R$)</th><th></th></tr>
+            ${custosRows}
+            <tr class="total"><td>Custo total de obra</td><td style="text-align:right">${fmtBRL(r.custoObraTotal)}</td><td></td></tr>
+          </table>
+          <button class="ghost small add-row-btn" style="margin-top:10px;" data-addrow="1">+ Adicionar item</button>
+
+          <div class="field-row" style="margin-top:16px;">
+            <div class="field"><label>Início da obra</label><input type="date" data-f="obra.inicioObra" value="${p.obra.inicioObra}"></div>
+            <div class="field"><label>Prazo de obra (meses)</label><input type="number" data-f="obra.prazoObraMeses" value="${p.obra.prazoObraMeses}"></div>
+          </div>
+          <button class="btn-despesa" style="margin-top:12px;" data-abrir-cronograma="1">Definir cronograma de desembolso →</button>
+        </section>
+
+        <button class="ghost" data-open-fluxo="1" style="margin:4px 0 24px;">Ver fluxo de caixa completo →</button>
+
+      </div>
+
+      <div style="position:sticky;top:16px;">
+        <section class="panel">
+          ${sidebarHTML(p, r, pos)}
+        </section>
+      </div>
+    </div>
+  </div>`;
+}
+
+let tabelaFluxoAberta = false;
+let paineisColapsados = {};
+
+/* ================= MODAL: ORÇAMENTO ESTIMADO POR ÁREA ================= */
+let estimativaGrid = [];
+let estimativaPavimentacao = 'asfalto';
+
+function abrirModalEstimativa(){
+  const p = state.atual;
+  estimativaPavimentacao = 'asfalto';
+  estimativaGrid = BANCO_CUSTOS_REFERENCIA.map(ref=>({
+    item: ref.item,
+    taxa: ref.item==='Pavimentação' ? OPCOES_PAVIMENTACAO.find(o=>o.id==='asfalto').taxa : ref.taxa
+  }));
+  renderModalEstimativa();
+}
+function fecharModalEstimativa(){
+  const overlay = document.querySelector('.modal-overlay-estimativa');
+  if(overlay) overlay.remove();
+}
+function renderModalEstimativa(){
+  fecharModalEstimativa();
+  const p = state.atual;
+  const area = Number(p.terreno.area)||0;
+
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay modal-overlay-estimativa';
+  overlay.innerHTML = `
+    <div class="modal-box wide" style="position:relative;">
+      <div class="modal-header">
+        <div>
+          <h2>Orçamento estimado a partir da área</h2>
+          <div class="footnote" style="margin:2px 0 0;">Área do terreno: <strong>${area.toLocaleString('pt-BR')} m²</strong>. As taxas abaixo são uma estimativa inicial de referência de mercado — não vêm de uma base online em tempo real (o sistema roda offline) — calibre com orçamentos reais antes de decidir algo.</div>
+        </div>
+        <button class="modal-close" data-fechar-estimativa="1">✕</button>
+      </div>
+
+      <div class="field-row" style="margin-bottom:10px;">
+        <div class="field">
+          <label>Tipo de pavimentação</label>
+          <select id="estimativaPavimentacaoSel">
+            ${OPCOES_PAVIMENTACAO.map(o=>`<option value="${o.id}" ${estimativaPavimentacao===o.id?'selected':''}>${o.nome} (R$ ${o.taxa.toFixed(2)}/m²)</option>`).join('')}
+          </select>
+        </div>
+      </div>
+
+      <div class="cronograma-scroll" style="max-height:50vh;" id="estimativaTabelaWrap"></div>
+
+      <div class="previsao-total-bar" style="margin-top:10px;">
+        <span>Total estimado</span>
+        <strong data-estimativa-total>${fmtBRL(0)}</strong>
+      </div>
+
+      <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px;">
+        <button class="ghost" data-fechar-estimativa="1">Cancelar</button>
+        <button class="primary" data-estimativa-aplicar="1">Aplicar ao orçamento</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+
+  renderEstimativaTabela();
+
+  overlay.querySelector('#estimativaPavimentacaoSel').addEventListener('change', (e)=>{
+    estimativaPavimentacao = e.target.value;
+    const nova = OPCOES_PAVIMENTACAO.find(o=>o.id===estimativaPavimentacao);
+    const linha = estimativaGrid.find(l=>l.item==='Pavimentação');
+    if(linha && nova) linha.taxa = nova.taxa;
+    renderEstimativaTabela();
+  });
+
+  overlay.querySelectorAll('[data-fechar-estimativa]').forEach(el=>el.addEventListener('click', fecharModalEstimativa));
+
+  overlay.querySelector('[data-estimativa-aplicar]').addEventListener('click', async ()=>{
+    estimativaGrid.forEach(linha=>{
+      const valor = round2((Number(linha.taxa)||0) * area);
+      const existente = state.atual.custos.find(c=>c.item.toLowerCase()===linha.item.toLowerCase());
+      if(existente) existente.valor = valor;
+      else state.atual.custos.push({ item: linha.item, valor, cronograma:[] });
+    });
+    await salvarProjeto(state.atual);
+    fecharModalEstimativa();
+    renderFull();
+    mostrarAviso('Orçamento estimado aplicado. Revise os valores antes de usar no estudo final.', 'sucesso');
+  });
+}
+function renderEstimativaTabela(){
+  const p = state.atual;
+  const area = Number(p.terreno.area)||0;
+  const wrap = document.getElementById('estimativaTabelaWrap');
+  if(!wrap) return;
+  const total = estimativaGrid.reduce((s,l)=>s+(Number(l.taxa)||0)*area,0);
+
+  wrap.innerHTML = `<table class="cronograma" style="min-width:0;">
+    <thead><tr><th style="text-align:left;">Item</th><th>R$/m²</th><th>Valor estimado</th></tr></thead>
+    <tbody>
+      ${estimativaGrid.map((l,i)=>`
+        <tr>
+          <td class="item-nome" style="position:static;">${escapeHtml(l.item)}</td>
+          <td class="cel"><input type="text" inputmode="decimal" class="money-in" data-estimativa-taxa="${i}" value="${l.taxa.toFixed(2)}" style="width:90px;"></td>
+          <td class="row-total pos">${fmtBRL((Number(l.taxa)||0)*area)}</td>
+        </tr>`).join('')}
+    </tbody>
+  </table>`;
+
+  wrap.querySelectorAll('[data-estimativa-taxa]').forEach(el=>{
+    el.addEventListener('input', ()=>{
+      const idx = Number(el.getAttribute('data-estimativa-taxa'));
+      estimativaGrid[idx].taxa = parseMoneyBR(el.value);
+      atualizarEstimativaTotal();
+      const linhaTotal = el.closest('tr').querySelector('.row-total');
+      if(linhaTotal) linhaTotal.textContent = fmtBRL(estimativaGrid[idx].taxa*area);
+    });
+    el.addEventListener('blur', ()=>{ el.value = parseMoneyBR(el.value).toFixed(2); });
+    el.addEventListener('focus', ()=>{ el.select(); });
+  });
+  atualizarEstimativaTotal();
+}
+function atualizarEstimativaTotal(){
+  const p = state.atual;
+  const area = Number(p.terreno.area)||0;
+  const totalEl = document.querySelector('[data-estimativa-total]');
+  if(totalEl) totalEl.textContent = fmtBRL(estimativaGrid.reduce((s,l)=>s+(Number(l.taxa)||0)*area,0));
+}
+
+/* ================= MODAL: PREVISÃO DE VENDAS ================= */
+let previsaoMeses = [];
+let previsaoCenarios = [];
+let previsaoNomeNovo = '';
+
+function mesLabelPrevisao(p, idx){
+  const d = addMonths(new Date(p.vendas.inicioVendas+'T00:00:00'), idx);
+  return fmtMesAno(d);
+}
+
+async function abrirModalPrevisao(){
+  const p = state.atual;
+  const r = calcular(p);
+  previsaoMeses = (p.vendas.previsao && p.vendas.previsao.length)
+    ? [...p.vendas.previsao]
+    : distribuirIgualmente(r.qtdDireta, Math.max(Number(p.vendas.condicao.qtdParcelas)||6,1));
+  previsaoCenarios = await carregarListaCenarios();
+  previsaoNomeNovo = '';
+  renderModalPrevisao();
+}
+
+function distribuirIgualmente(total, meses){
+  meses = Math.max(meses,1);
+  const base = Math.floor(total/meses);
+  const resto = total - base*meses;
+  const arr = new Array(meses).fill(base);
+  for(let i=0;i<resto;i++) arr[meses-1-i] += 1;
+  return arr;
+}
+function distribuirIgualmenteMoeda(total, partes){
+  partes = Math.max(partes,1);
+  const totalCent = Math.round((Number(total)||0)*100);
+  const baseCent = Math.floor(totalCent/partes);
+  const restoCent = totalCent - baseCent*partes;
+  const arr = new Array(partes).fill(baseCent);
+  for(let i=0;i<restoCent;i++) arr[partes-1-i] += 1;
+  return arr.map(c=>c/100);
+}
+
+function fecharModalPrevisao(){
+  const overlay = document.querySelector('.modal-overlay-previsao');
+  if(overlay) overlay.remove();
+}
+
+function renderModalPrevisao(){
+  fecharModalPrevisao();
+  const p = state.atual;
+  const r = calcular(p);
+  const soma = previsaoMeses.reduce((s,n)=>s+(Number(n)||0),0);
+  const alvo = r.qtdDireta;
+
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay modal-overlay-previsao';
+  overlay.innerHTML = `
+    <div class="modal-box" style="position:relative;">
+      <div class="modal-header">
+        <div>
+          <h2>Previsão de vendas</h2>
+          <div class="footnote" style="margin:2px 0 0;">Quantidade de lotes vendidos em cada mês, a partir do início das vendas (${p.vendas.inicioVendas ? new Date(p.vendas.inicioVendas+'T00:00:00').toLocaleDateString('pt-BR') : ''}).</div>
+        </div>
+        <button class="modal-close" data-fechar-previsao="1">✕</button>
+      </div>
+
+      <div class="previsao-total-bar">
+        <span>Total distribuído: <strong data-previsao-soma>${soma}</strong> de <strong>${alvo}</strong> lotes</span>
+        <span data-previsao-badge>${soma===alvo?'<span class="badge good">Bate com o total</span>':'<span class="badge warn">Diferente do total</span>'}</span>
+      </div>
+
+      <div class="previsao-rows" data-previsao-rows></div>
+
+      <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">
+        <button class="ghost small" data-previsao-addrow="1">+ Adicionar mês</button>
+        <button class="ghost small" data-previsao-auto="1">Distribuir igualmente</button>
+        <button class="ghost small" data-previsao-limpar="1">Limpar</button>
+      </div>
+
+      <div class="subhead">Cenários salvos</div>
+      <div data-previsao-cenarios-lista></div>
+      <div class="field-row" style="margin-top:6px;">
+        <div class="field wide">
+          <label>Salvar previsão atual como novo cenário</label>
+          <div style="display:flex;gap:8px;">
+            <input type="text" data-previsao-nome placeholder="Ex.: ritmo lento, ritmo padrão" style="flex:1;">
+            <button class="ghost small" data-previsao-salvar-cenario="1">Salvar</button>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:18px;">
+        <button class="ghost" data-fechar-previsao="1">Cancelar</button>
+        <button class="primary" data-previsao-aplicar="1">Aplicar previsão</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+
+  renderPrevisaoRows();
+  renderPrevisaoCenariosLista();
+  bindModalPrevisaoEventosEstaticos();
+}
+
+function renderPrevisaoRows(){
+  const p = state.atual;
+  const rowsWrap = document.querySelector('[data-previsao-rows]');
+  if(!rowsWrap) return;
+  if(previsaoMeses.length===0){
+    rowsWrap.innerHTML = `<div class="footnote" style="padding:14px;text-align:center;">Nenhum mês adicionado. Use "+ Adicionar mês" ou "Distribuir igualmente" para começar.</div>`;
+    return;
+  }
+  rowsWrap.innerHTML = previsaoMeses.map((qtd,i)=>`
+    <div class="previsao-row">
+      <span class="mes-label">${mesLabelPrevisao(p,i)}</span>
+      <input type="number" min="0" data-previsao-idx="${i}" value="${Number(qtd)||0}">
+      <button class="rm" data-previsao-rmrow="${i}" title="Remover mês">✕</button>
+    </div>`).join('');
+
+  rowsWrap.querySelectorAll('[data-previsao-idx]').forEach(el=>{
+    el.addEventListener('input', ()=>{
+      const idx = Number(el.getAttribute('data-previsao-idx'));
+      previsaoMeses[idx] = el.value==='' ? 0 : Number(el.value);
+      atualizarPrevisaoTotal();
+    });
+  });
+  rowsWrap.querySelectorAll('[data-previsao-rmrow]').forEach(el=>{
+    el.addEventListener('click', ()=>{
+      const idx = Number(el.getAttribute('data-previsao-rmrow'));
+      previsaoMeses.splice(idx,1);
+      renderPrevisaoRows();
+      atualizarPrevisaoTotal();
+    });
+  });
+}
+
+function atualizarPrevisaoTotal(){
+  const p = state.atual;
+  const r = calcular(p);
+  const soma = previsaoMeses.reduce((s,n)=>s+(Number(n)||0),0);
+  const somaEl = document.querySelector('[data-previsao-soma]');
+  if(somaEl) somaEl.textContent = soma;
+  const badgeEl = document.querySelector('[data-previsao-badge]');
+  if(badgeEl) badgeEl.innerHTML = soma===r.qtdDireta ? '<span class="badge good">Bate com o total</span>' : '<span class="badge warn">Diferente do total</span>';
+}
+
+function renderPrevisaoCenariosLista(){
+  const wrap = document.querySelector('[data-previsao-cenarios-lista]');
+  if(!wrap) return;
+  if(previsaoCenarios.length===0){
+    wrap.innerHTML = `<div class="footnote" style="margin:4px 0 8px;">Nenhum cenário salvo ainda.</div>`;
+    return;
+  }
+  wrap.innerHTML = previsaoCenarios.map(c=>`
+    <div class="cenario-item">
+      <span class="nome">${escapeHtml(c.nome)}</span>
+      <span class="acoes">
+        <button class="ghost small" data-previsao-usar="${c.id}">Usar</button>
+        <button class="ghost small" data-previsao-apagar-cenario="${c.id}">Excluir</button>
+      </span>
+    </div>`).join('');
+
+  wrap.querySelectorAll('[data-previsao-usar]').forEach(el=>{
+    el.addEventListener('click', async ()=>{
+      const id = el.getAttribute('data-previsao-usar');
+      const cenario = await carregarCenario(id);
+      if(cenario && cenario.meses){
+        previsaoMeses = [...cenario.meses];
+        renderPrevisaoRows();
+        atualizarPrevisaoTotal();
+      }
+    });
+  });
+  wrap.querySelectorAll('[data-previsao-apagar-cenario]').forEach(el=>{
+    el.addEventListener('click', async ()=>{
+      const id = el.getAttribute('data-previsao-apagar-cenario');
+      await apagarCenarioStorage(id);
+      previsaoCenarios = previsaoCenarios.filter(c=>c.id!==id);
+      renderPrevisaoCenariosLista();
+    });
+  });
+}
+
+function bindModalPrevisaoEventosEstaticos(){
+  document.querySelectorAll('[data-fechar-previsao]').forEach(el=>{
+    el.addEventListener('click', fecharModalPrevisao);
+  });
+
+  const addRow = document.querySelector('[data-previsao-addrow]');
+  if(addRow) addRow.addEventListener('click', ()=>{
+    previsaoMeses.push(0);
+    renderPrevisaoRows();
+    atualizarPrevisaoTotal();
+  });
+
+  const autoBtn = document.querySelector('[data-previsao-auto]');
+  if(autoBtn) autoBtn.addEventListener('click', ()=>{
+    const p = state.atual;
+    const r = calcular(p);
+    previsaoMeses = distribuirIgualmente(r.qtdDireta, Math.max(previsaoMeses.length,1));
+    renderPrevisaoRows();
+    atualizarPrevisaoTotal();
+  });
+
+  const limparBtn = document.querySelector('[data-previsao-limpar]');
+  if(limparBtn) limparBtn.addEventListener('click', ()=>{
+    previsaoMeses = [];
+    renderPrevisaoRows();
+    atualizarPrevisaoTotal();
+  });
+
+  const nomeInput = document.querySelector('[data-previsao-nome]');
+  if(nomeInput) nomeInput.addEventListener('input', ()=>{ previsaoNomeNovo = nomeInput.value; });
+
+  const salvarCenarioBtn = document.querySelector('[data-previsao-salvar-cenario]');
+  if(salvarCenarioBtn) salvarCenarioBtn.addEventListener('click', async ()=>{
+    const nome = (previsaoNomeNovo||'').trim();
+    if(!nome){ if(nomeInput){ nomeInput.style.borderColor='var(--bad)'; nomeInput.placeholder='Dê um nome ao cenário'; } return; }
+    const id = 'c_'+Date.now()+'_'+Math.random().toString(36).slice(2,7);
+    const cenario = { id, nome, meses: [...previsaoMeses] };
+    await salvarCenarioStorage(cenario);
+    previsaoCenarios.push({id, nome});
+    await salvarListaCenarios(previsaoCenarios);
+    previsaoNomeNovo = '';
+    if(nomeInput) nomeInput.value = '';
+    renderPrevisaoCenariosLista();
+  });
+
+  const aplicarBtn = document.querySelector('[data-previsao-aplicar]');
+  if(aplicarBtn) aplicarBtn.addEventListener('click', async ()=>{
+    state.atual.vendas.previsao = [...previsaoMeses];
+    await salvarProjeto(state.atual);
+    fecharModalPrevisao();
+    render();
+  });
+}
+
+/* ================= MODAL: CRONOGRAMA DE DESEMBOLSO ================= */
+let cronogramaGrid = [];
+let cronogramaNumMeses = 0;
+let cronogramaCenarios = [];
+let cronogramaNomeNovo = '';
+
+function mesLabelCronograma(p, idx){
+  const d = addMonths(new Date(p.obra.inicioObra+'T00:00:00'), idx);
+  return fmtMesAno(d);
+}
+
+async function abrirModalCronograma(){
+  const p = state.atual;
+  const prazoObra = Math.max(Number(p.obra.prazoObraMeses)||1,1);
+  cronogramaNumMeses = Math.max(prazoObra, ...p.custos.map(c=>c.cronograma?c.cronograma.length:0), 1);
+  cronogramaGrid = p.custos.map(c=>{
+    if(c.cronograma && c.cronograma.length){
+      const linha = new Array(cronogramaNumMeses).fill(0);
+      c.cronograma.forEach((v,i)=>{ if(i<cronogramaNumMeses) linha[i] = Number(v)||0; });
+      return linha;
+    }
+    return distribuirIgualmenteMoeda(Number(c.valor)||0, prazoObra).concat(new Array(Math.max(cronogramaNumMeses-prazoObra,0)).fill(0));
+  });
+  cronogramaCenarios = await carregarListaCenariosDespesas();
+  cronogramaNomeNovo = '';
+  renderModalCronograma();
+}
+
+function fecharModalCronograma(){
+  const overlay = document.querySelector('.modal-overlay-cronograma');
+  if(overlay) overlay.remove();
+}
+
+function renderModalCronograma(){
+  fecharModalCronograma();
+  const p = state.atual;
+
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay modal-overlay-cronograma';
+  overlay.innerHTML = `
+    <div class="modal-box wide" style="position:relative;">
+      <div class="modal-header">
+        <div>
+          <h2>Cronograma de desembolso</h2>
+          <div class="footnote" style="margin:2px 0 0;">Valor que pretende desembolsar em cada item, mês a mês, a partir do início da obra (${p.obra.inicioObra ? new Date(p.obra.inicioObra+'T00:00:00').toLocaleDateString('pt-BR') : ''}). Itens sem ajuste ficam com distribuição linear.</div>
+        </div>
+        <button class="modal-close" data-fechar-cronograma="1">✕</button>
+      </div>
+
+      <div class="previsao-total-bar">
+        <span>Total do orçamento: <strong data-cg-totalorcamento>${fmtBRL(p.custos.reduce((s,c)=>s+(Number(c.valor)||0),0))}</strong></span>
+        <span>Saldo que falta distribuir: <strong data-cg-saldorestante></strong></span>
+      </div>
+
+      <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;">
+        <button class="ghost small" data-cronograma-addmes="1">+ Adicionar mês</button>
+        <button class="ghost small" data-cronograma-redistribuir="1">Redistribuir tudo igualmente</button>
+        <button class="ghost small" data-cronograma-limpar="1">Limpar tudo</button>
+      </div>
+
+      <div class="cronograma-scroll" data-cronograma-scroll></div>
+
+      <div class="subhead">Cenários salvos</div>
+      <div data-cronograma-cenarios-lista></div>
+      <div class="field-row" style="margin-top:6px;">
+        <div class="field wide">
+          <label>Salvar cronograma atual como novo cenário</label>
+          <div style="display:flex;gap:8px;">
+            <input type="text" data-cronograma-nome placeholder="Ex.: obra acelerada, obra padrão" style="flex:1;">
+            <button class="ghost small" data-cronograma-salvar-cenario="1">Salvar</button>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px;">
+        <button class="ghost" data-fechar-cronograma="1">Cancelar</button>
+        <button class="primary" data-cronograma-aplicar="1">Aplicar cronograma</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+
+  renderCronogramaTabela();
+  renderCronogramaCenariosLista();
+  atualizarSaldoRestanteCronograma();
+  bindCronogramaEventosEstaticos();
+}
+
+function renderCronogramaTabela(){
+  const p = state.atual;
+  const scroll = document.querySelector('[data-cronograma-scroll]');
+  if(!scroll) return;
+
+  const headerCols = [];
+  for(let m=0;m<cronogramaNumMeses;m++) headerCols.push(`<th>${mesLabelCronograma(p,m)}</th>`);
+
+  const rows = p.custos.map((c,i)=>{
+    const cels = cronogramaGrid[i].map((v,m)=>`<td class="cel"><input type="text" inputmode="decimal" class="money-in" data-cg-row="${i}" data-cg-col="${m}" value="${fmtMoneyInput(v)}"></td>`).join('');
+    const total = cronogramaGrid[i].reduce((s,n)=>s+(Number(n)||0),0);
+    const valorItem = Number(c.valor)||0;
+    const saldo = round2(valorItem - total);
+    const diff = Math.round(total) !== Math.round(valorItem);
+    return `<tr data-cg-linha="${i}">
+      <td class="item-nome sticky-col1">${escapeHtml(c.item)}</td>
+      <td class="row-valor sticky-col2" data-cg-valoritem="${i}">${fmtBRL(valorItem)}</td>
+      <td class="row-total sticky-col3 ${diff?'neg':'pos'}" data-cg-rowtotal="${i}">${fmtBRL(total)}</td>
+      <td class="row-total sticky-col4 ${saldo===0?'pos':(saldo>0?'warn':'neg')}" data-cg-rowsaldo="${i}">${fmtBRL(saldo)}</td>
+      <td class="cel-acao sticky-col5"><button class="ghost small" data-cg-parcelar="${i}">Lançar</button></td>
+      ${cels}
+    </tr>`;
+  }).join('');
+
+  const totaisMes = [];
+  for(let m=0;m<cronogramaNumMeses;m++){
+    let soma = 0;
+    cronogramaGrid.forEach(linha=>{ soma += Number(linha[m])||0; });
+    totaisMes.push(soma);
+  }
+  const grandTotal = totaisMes.reduce((s,n)=>s+n,0);
+  const totalOrcamento = p.custos.reduce((s,c)=>s+(Number(c.valor)||0),0);
+  const saldoGeral = round2(totalOrcamento - grandTotal);
+  const totalRowCels = totaisMes.map((v,m)=>`<td class="row-total" data-cg-coltotal="${m}">${fmtBRL(v)}</td>`).join('');
+
+  scroll.innerHTML = `<table class="cronograma">
+    <thead><tr>
+      <th class="sticky-col1">Item / mês</th>
+      <th class="sticky-col2">Valor definido</th>
+      <th class="sticky-col3">Total lançado</th>
+      <th class="sticky-col4">Saldo</th>
+      <th class="sticky-col5"></th>
+      ${headerCols}
+    </tr></thead>
+    <tbody>${rows}
+      <tr class="total-row">
+        <td class="item-nome sticky-col1">Total mensal</td>
+        <td class="row-valor sticky-col2">${fmtBRL(totalOrcamento)}</td>
+        <td class="row-total sticky-col3" data-cg-grandtotal="1">${fmtBRL(grandTotal)}</td>
+        <td class="row-total sticky-col4 ${saldoGeral===0?'pos':(saldoGeral>0?'warn':'neg')}" data-cg-saldogeral="1">${fmtBRL(saldoGeral)}</td>
+        <td class="sticky-col5"></td>
+        ${totalRowCels}
+      </tr>
+    </tbody>
+  </table>`;
+
+  scroll.querySelectorAll('[data-cg-row]').forEach(el=>{
+    el.addEventListener('input', ()=>{
+      const row = Number(el.getAttribute('data-cg-row'));
+      const col = Number(el.getAttribute('data-cg-col'));
+      cronogramaGrid[row][col] = parseMoneyBR(el.value);
+      atualizarCronogramaTotais(row, col);
+    });
+    el.addEventListener('blur', ()=>{ el.value = fmtMoneyInput(parseMoneyBR(el.value)); });
+    el.addEventListener('focus', ()=>{ el.select(); });
+  });
+
+  scroll.querySelectorAll('[data-cg-parcelar]').forEach(el=>{
+    el.addEventListener('click', ()=>{
+      abrirParcelarLinha(Number(el.getAttribute('data-cg-parcelar')));
+    });
+  });
+}
+
+function atualizarSaldoRestanteCronograma(){
+  const p = state.atual;
+  const el = document.querySelector('[data-cg-saldorestante]');
+  if(!el) return;
+  const totalOrcamento = p.custos.reduce((s,c)=>s+(Number(c.valor)||0),0);
+  let lancado = 0;
+  cronogramaGrid.forEach(linha=>linha.forEach(v=>{ lancado += Number(v)||0; }));
+  const saldo = round2(totalOrcamento - lancado);
+  el.textContent = fmtBRL(saldo);
+  el.className = saldo===0?'pos':(saldo>0?'warn':'neg');
+}
+
+function atualizarCronogramaTotais(row, col){
+  const p = state.atual;
+  const valorItem = Number(p.custos[row].valor)||0;
+  const total = cronogramaGrid[row].reduce((s,n)=>s+(Number(n)||0),0);
+  const rowTotalEl = document.querySelector(`[data-cg-rowtotal="${row}"]`);
+  if(rowTotalEl){
+    const diff = Math.round(total) !== Math.round(valorItem);
+    rowTotalEl.textContent = fmtBRL(total);
+    rowTotalEl.className = `row-total sticky-col3 ${diff?'neg':'pos'}`;
+  }
+  const rowSaldoEl = document.querySelector(`[data-cg-rowsaldo="${row}"]`);
+  if(rowSaldoEl){
+    const saldo = round2(valorItem - total);
+    rowSaldoEl.textContent = fmtBRL(saldo);
+    rowSaldoEl.className = `row-total sticky-col4 ${saldo===0?'pos':(saldo>0?'warn':'neg')}`;
+  }
+  const colTotalEl = document.querySelector(`[data-cg-coltotal="${col}"]`);
+  if(colTotalEl){
+    let soma = 0;
+    cronogramaGrid.forEach(linha=>{ soma += Number(linha[col])||0; });
+    colTotalEl.textContent = fmtBRL(soma);
+  }
+  const grandTotalEl = document.querySelector('[data-cg-grandtotal]');
+  let grandTotal = 0;
+  cronogramaGrid.forEach(linha=>linha.forEach(v=>{ grandTotal += Number(v)||0; }));
+  if(grandTotalEl) grandTotalEl.textContent = fmtBRL(grandTotal);
+  const saldoGeralEl = document.querySelector('[data-cg-saldogeral]');
+  if(saldoGeralEl){
+    const totalOrcamento = p.custos.reduce((s,c)=>s+(Number(c.valor)||0),0);
+    const saldoGeral = round2(totalOrcamento - grandTotal);
+    saldoGeralEl.textContent = fmtBRL(saldoGeral);
+    saldoGeralEl.className = `row-total sticky-col4 ${saldoGeral===0?'pos':(saldoGeral>0?'warn':'neg')}`;
+  }
+  atualizarSaldoRestanteCronograma();
+}
+
+function bindCronogramaEventosEstaticos(){
+  document.querySelectorAll('[data-fechar-cronograma]').forEach(el=>{
+    el.addEventListener('click', fecharModalCronograma);
+  });
+
+  const addMesBtn = document.querySelector('[data-cronograma-addmes]');
+  if(addMesBtn) addMesBtn.addEventListener('click', ()=>{
+    cronogramaNumMeses += 1;
+    cronogramaGrid.forEach(linha=>linha.push(0));
+    renderCronogramaTabela();
+    atualizarSaldoRestanteCronograma();
+  });
+
+  const redistribuirBtn = document.querySelector('[data-cronograma-redistribuir]');
+  if(redistribuirBtn) redistribuirBtn.addEventListener('click', ()=>{
+    const p = state.atual;
+    cronogramaGrid = p.custos.map(c=>distribuirIgualmenteMoeda(Number(c.valor)||0, cronogramaNumMeses));
+    renderCronogramaTabela();
+    atualizarSaldoRestanteCronograma();
+  });
+
+  const limparBtn = document.querySelector('[data-cronograma-limpar]');
+  if(limparBtn) limparBtn.addEventListener('click', ()=>{
+    cronogramaGrid = cronogramaGrid.map(linha=>linha.map(()=>0));
+    renderCronogramaTabela();
+    atualizarSaldoRestanteCronograma();
+  });
+
+  const nomeInput = document.querySelector('[data-cronograma-nome]');
+  if(nomeInput) nomeInput.addEventListener('input', ()=>{ cronogramaNomeNovo = nomeInput.value; });
+
+  const salvarCenarioBtn = document.querySelector('[data-cronograma-salvar-cenario]');
+  if(salvarCenarioBtn) salvarCenarioBtn.addEventListener('click', async ()=>{
+    const nome = (cronogramaNomeNovo||'').trim();
+    if(!nome){ if(nomeInput){ nomeInput.style.borderColor='var(--bad)'; nomeInput.placeholder='Dê um nome ao cenário'; } return; }
+    const p = state.atual;
+    const itens = {};
+    p.custos.forEach((c,i)=>{ itens[c.item] = [...cronogramaGrid[i]]; });
+    const id = 'cd_'+Date.now()+'_'+Math.random().toString(36).slice(2,7);
+    const cenario = { id, nome, itens };
+    await salvarCenarioDespesasStorage(cenario);
+    cronogramaCenarios.push({id, nome});
+    await salvarListaCenariosDespesas(cronogramaCenarios);
+    cronogramaNomeNovo = '';
+    if(nomeInput) nomeInput.value = '';
+    renderCronogramaCenariosLista();
+  });
+
+  const aplicarBtn = document.querySelector('[data-cronograma-aplicar]');
+  if(aplicarBtn) aplicarBtn.addEventListener('click', async ()=>{
+    state.atual.custos.forEach((c,i)=>{ c.cronograma = [...cronogramaGrid[i]]; });
+    await salvarProjeto(state.atual);
+    fecharModalCronograma();
+    render();
+  });
+}
+
+function renderCronogramaCenariosLista(){
+  const wrap = document.querySelector('[data-cronograma-cenarios-lista]');
+  if(!wrap) return;
+  if(cronogramaCenarios.length===0){
+    wrap.innerHTML = `<div class="footnote" style="margin:4px 0 8px;">Nenhum cenário salvo ainda.</div>`;
+    return;
+  }
+  wrap.innerHTML = cronogramaCenarios.map(c=>`
+    <div class="cenario-item">
+      <span class="nome">${escapeHtml(c.nome)}</span>
+      <span class="acoes">
+        <button class="ghost small" data-cronograma-usar="${c.id}">Usar</button>
+        <button class="ghost small" data-cronograma-apagar-cenario="${c.id}">Excluir</button>
+      </span>
+    </div>`).join('');
+
+  wrap.querySelectorAll('[data-cronograma-usar]').forEach(el=>{
+    el.addEventListener('click', async ()=>{
+      const id = el.getAttribute('data-cronograma-usar');
+      const cenario = await carregarCenarioDespesas(id);
+      if(cenario && cenario.itens) aplicarCenarioDespesasNaGrade(cenario);
+    });
+  });
+  wrap.querySelectorAll('[data-cronograma-apagar-cenario]').forEach(el=>{
+    el.addEventListener('click', async ()=>{
+      const id = el.getAttribute('data-cronograma-apagar-cenario');
+      await apagarCenarioDespesasStorage(id);
+      cronogramaCenarios = cronogramaCenarios.filter(c=>c.id!==id);
+      renderCronogramaCenariosLista();
+    });
+  });
+}
+
+function aplicarCenarioDespesasNaGrade(cenario){
+  const p = state.atual;
+  let maxLen = cronogramaNumMeses;
+  p.custos.forEach(c=>{
+    const arr = cenario.itens[c.item];
+    if(arr && arr.length>maxLen) maxLen = arr.length;
+  });
+  garantirColunasCronograma(maxLen);
+  p.custos.forEach((c,i)=>{
+    const arr = cenario.itens[c.item];
+    if(arr){
+      const linha = new Array(cronogramaNumMeses).fill(0);
+      arr.forEach((v,idx)=>{ if(idx<cronogramaNumMeses) linha[idx] = Number(v)||0; });
+      cronogramaGrid[i] = linha;
+    }
+  });
+  renderCronogramaTabela();
+  atualizarSaldoRestanteCronograma();
+}
+
+/* ---- Parcelar uma linha do cronograma (qtd de parcelas + mês inicial) ---- */
+function garantirColunasCronograma(minColunas){
+  while(cronogramaNumMeses < minColunas){
+    cronogramaGrid.forEach(linha=>linha.push(0));
+    cronogramaNumMeses += 1;
+  }
+}
+
+function fecharParcelarLinha(){
+  const overlay = document.querySelector('.modal-overlay-parcelar');
+  if(overlay) overlay.remove();
+}
+
+function abrirParcelarLinha(rowIdx){
+  fecharParcelarLinha();
+  const p = state.atual;
+  const item = p.custos[rowIdx];
+  let modo = 'total';
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay modal-overlay-parcelar';
+  overlay.style.zIndex = '110';
+  overlay.innerHTML = `
+    <div class="modal-box" style="max-width:400px;position:relative;">
+      <div class="modal-header">
+        <div><h2 style="font-size:16px;">Lançar valores — ${escapeHtml(item.item)}</h2>
+        <div class="footnote" style="margin:2px 0 0;">Valor definido para o item: <strong>${fmtBRL(Number(item.valor)||0)}</strong></div></div>
+        <button class="modal-close" data-fechar-parcelar="1">✕</button>
+      </div>
+
+      <div class="modo-toggle">
+        <button type="button" class="modo-btn active" data-parcelar-modo="total">Dividir o valor total</button>
+        <button type="button" class="modo-btn" data-parcelar-modo="mensal">Valor mensal fixo</button>
+      </div>
+
+      <div data-parcelar-campos style="margin-top:12px;"></div>
+      <div class="footnote" data-parcelar-preview style="margin-top:6px;"></div>
+      <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px;">
+        <button class="ghost" data-fechar-parcelar="1">Cancelar</button>
+        <button class="primary" data-parcelar-confirmar="${rowIdx}">Aplicar na linha</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+
+  const camposWrap = overlay.querySelector('[data-parcelar-campos]');
+  const preview = overlay.querySelector('[data-parcelar-preview]');
+
+  function renderCampos(){
+    if(modo==='total'){
+      camposWrap.innerHTML = `
+        <div class="field-row">
+          <div class="field"><label>Quantidade de parcelas</label><input type="number" min="1" value="1" data-parcelar-qtd></div>
+          <div class="field"><label>Mês inicial (nº desde o início da obra)</label><input type="number" min="1" value="1" data-parcelar-mesinicial></div>
+        </div>`;
+    } else {
+      camposWrap.innerHTML = `
+        <div class="field-row">
+          <div class="field"><label>Valor mensal (R$)</label><input type="text" inputmode="decimal" class="money-in" value="${fmtMoneyInput(0)}" data-parcelar-valormensal></div>
+          <div class="field"><label>Quantidade de meses</label><input type="number" min="1" value="1" data-parcelar-qtdmeses></div>
+          <div class="field"><label>Mês inicial (nº desde o início da obra)</label><input type="number" min="1" value="1" data-parcelar-mesinicial2></div>
+        </div>
+        <div class="footnote">Se o total lançado ficar diferente do valor definido do item, a coluna "Saldo" vai indicar a diferença — ajuste o valor do item na tela de custos se quiser igualar.</div>`;
+    }
+    bindCampos();
+    atualizarPreview();
+  }
+
+  function bindCampos(){
+    if(modo==='total'){
+      const qtdInput = overlay.querySelector('[data-parcelar-qtd]');
+      const mesInput = overlay.querySelector('[data-parcelar-mesinicial]');
+      qtdInput.addEventListener('input', atualizarPreview);
+      mesInput.addEventListener('input', atualizarPreview);
+    } else {
+      const valorInput = overlay.querySelector('[data-parcelar-valormensal]');
+      const qtdMesesInput = overlay.querySelector('[data-parcelar-qtdmeses]');
+      const mesInput2 = overlay.querySelector('[data-parcelar-mesinicial2]');
+      valorInput.addEventListener('input', atualizarPreview);
+      valorInput.addEventListener('blur', ()=>{ valorInput.value = fmtMoneyInput(parseMoneyBR(valorInput.value)); });
+      valorInput.addEventListener('focus', ()=>{ valorInput.select(); });
+      qtdMesesInput.addEventListener('input', atualizarPreview);
+      mesInput2.addEventListener('input', atualizarPreview);
+    }
+  }
+
+  function atualizarPreview(){
+    if(modo==='total'){
+      const qtdInput = overlay.querySelector('[data-parcelar-qtd]');
+      const mesInput = overlay.querySelector('[data-parcelar-mesinicial]');
+      const qtd = Math.max(Number(qtdInput.value)||1,1);
+      const mesInicial = Math.max(Number(mesInput.value)||1,1);
+      const valorParcela = (Number(item.valor)||0)/qtd;
+      const mesInicioLabel = mesLabelCronograma(p, mesInicial-1);
+      const mesFimLabel = mesLabelCronograma(p, mesInicial-2+qtd);
+      preview.innerHTML = `${qtd}x de <strong>${fmtBRL(valorParcela)}</strong>, de ${mesInicioLabel} a ${mesFimLabel}. Isso substitui os valores já lançados nessa linha.`;
+    } else {
+      const valorInput = overlay.querySelector('[data-parcelar-valormensal]');
+      const qtdMesesInput = overlay.querySelector('[data-parcelar-qtdmeses]');
+      const mesInput2 = overlay.querySelector('[data-parcelar-mesinicial2]');
+      const valorMensal = parseMoneyBR(valorInput.value);
+      const qtdMeses = Math.max(Number(qtdMesesInput.value)||1,1);
+      const mesInicial = Math.max(Number(mesInput2.value)||1,1);
+      const mesInicioLabel = mesLabelCronograma(p, mesInicial-1);
+      const mesFimLabel = mesLabelCronograma(p, mesInicial-2+qtdMeses);
+      const total = valorMensal*qtdMeses;
+      preview.innerHTML = `${fmtBRL(valorMensal)} por mês, de ${mesInicioLabel} a ${mesFimLabel} — total lançado: <strong>${fmtBRL(total)}</strong>. Isso substitui os valores já lançados nessa linha.`;
+    }
+  }
+
+  overlay.querySelectorAll('[data-parcelar-modo]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      modo = btn.getAttribute('data-parcelar-modo');
+      overlay.querySelectorAll('[data-parcelar-modo]').forEach(b=>b.classList.toggle('active', b===btn));
+      renderCampos();
+    });
+  });
+
+  renderCampos();
+
+  overlay.querySelectorAll('[data-fechar-parcelar]').forEach(el=>el.addEventListener('click', fecharParcelarLinha));
+
+  overlay.querySelector('[data-parcelar-confirmar]').addEventListener('click', ()=>{
+    let mesInicial, valores;
+    if(modo==='total'){
+      const qtd = Math.max(Number(overlay.querySelector('[data-parcelar-qtd]').value)||1,1);
+      mesInicial = Math.max(Number(overlay.querySelector('[data-parcelar-mesinicial]').value)||1,1);
+      garantirColunasCronograma(mesInicial-1+qtd);
+      valores = distribuirIgualmenteMoeda(Number(item.valor)||0, qtd);
+    } else {
+      const valorMensal = parseMoneyBR(overlay.querySelector('[data-parcelar-valormensal]').value);
+      const qtdMeses = Math.max(Number(overlay.querySelector('[data-parcelar-qtdmeses]').value)||1,1);
+      mesInicial = Math.max(Number(overlay.querySelector('[data-parcelar-mesinicial2]').value)||1,1);
+      garantirColunasCronograma(mesInicial-1+qtdMeses);
+      valores = new Array(qtdMeses).fill(valorMensal);
+    }
+    cronogramaGrid[rowIdx] = cronogramaGrid[rowIdx].map(()=>0);
+    valores.forEach((v,i)=>{ cronogramaGrid[rowIdx][mesInicial-1+i] = v; });
+    fecharParcelarLinha();
+    renderCronogramaTabela();
+    atualizarSaldoRestanteCronograma();
+  });
+}
+
+function renderTabelaFluxo(serie){
+  const linhas = serie.map((s,i)=>{
+    const temDetalhe = (s.detEntradas&&s.detEntradas.length) || (s.detSaidas&&s.detSaidas.length);
+    const entradaTotal = (s.detEntradas||[]).filter(d=>d.label.startsWith('Entrada')).reduce((sm,d)=>sm+d.valor,0);
+    const investidorTotal = (s.detEntradas||[]).filter(d=>d.label==='Receita de investidores').reduce((sm,d)=>sm+d.valor,0);
+    const saldoTotal = (s.detEntradas||[]).filter(d=>!d.label.startsWith('Entrada') && d.label!=='Receita de investidores').reduce((sm,d)=>sm+d.valor,0);
+    const detalheHtml = temDetalhe ? `
+      <tr class="fluxo-detalhe-row" data-fluxo-detalhe="${i}" style="display:none;">
+        <td colspan="5">
+          <div class="fluxo-detalhe">
+            <div class="fluxo-detalhe-col">
+              <div class="fluxo-detalhe-titulo">Entradas lançadas</div>
+              ${entradaTotal>0 ? `<div class="fluxo-detalhe-item"><span>Entrada</span><span class="pos">${fmtBRL(entradaTotal)}</span></div>` : ''}
+              ${saldoTotal>0 ? `<div class="fluxo-detalhe-item"><span>Saldo parcelado</span><span class="pos">${fmtBRL(saldoTotal)}</span></div>` : ''}
+              ${investidorTotal>0 ? `<div class="fluxo-detalhe-item"><span>Receita de investidores</span><span class="pos">${fmtBRL(investidorTotal)}</span></div>` : ''}
+              ${(entradaTotal<=0 && saldoTotal<=0 && investidorTotal<=0) ? '<div class="fluxo-detalhe-vazio">Nenhuma entrada neste mês.</div>' : ''}
+            </div>
+            <div class="fluxo-detalhe-col">
+              <div class="fluxo-detalhe-titulo">Saídas lançadas</div>
+              ${s.detSaidas.length ? s.detSaidas.map(d=>`<div class="fluxo-detalhe-item"><span>${escapeHtml(d.label)}</span><span class="neg">${fmtBRL(d.valor)}</span></div>`).join('') : '<div class="fluxo-detalhe-vazio">Nenhuma saída neste mês.</div>'}
+            </div>
+          </div>
+        </td>
+      </tr>` : '';
+    return `<tr class="fluxo-mes-row" data-fluxo-mes="${i}">
+      <td>${fmtMesAno(new Date(s.mes))} <i class="seta">▸</i></td>
+      <td class="num pos">${s.entrada>0?fmtBRL(s.entrada):'—'}</td>
+      <td class="num neg">${s.saida>0?fmtBRL(s.saida):'—'}</td>
+      <td class="num ${s.liquido>=0?'pos':'neg'}">${fmtBRL(s.liquido)}</td>
+      <td class="num ${s.acumulado>=0?'pos':'neg'}"><strong>${fmtBRL(s.acumulado)}</strong></td>
+    </tr>${detalheHtml}`;
+  }).join('');
+  return `<div class="fluxo-table-scroll">
+    <table class="costs fluxo-table" data-fluxo-tabela="1">
+      <thead><tr><th>Mês</th><th class="num">Entrada</th><th class="num">Saída</th><th class="num">Líquido</th><th class="num">Acumulado</th></tr></thead>
+      <tbody>${linhas}</tbody>
+    </table>
+  </div>`;
+}
+
+function renderChart(serie){
+  if(!serie.length) return '';
+  const W = 900, H = 260, padL=44, padR=10, padT=10, padB=28;
+  const plotW = W-padL-padR, plotH = H-padT-padB;
+  const n = serie.length;
+  const barW = Math.max(plotW/n*0.62, 1.5);
+  const maxFlow = Math.max(1, ...serie.map(s=>Math.max(s.entrada,s.saida)));
+  const minAcc = Math.min(0, ...serie.map(s=>s.acumulado));
+  const maxAcc = Math.max(0, ...serie.map(s=>s.acumulado));
+  const yFlow = v => plotT() + plotH*0.62 - (v/maxFlow)*(plotH*0.6);
+  function plotT(){ return padT; }
+  const baseY = padT + plotH*0.62;
+  const yAcc = v => padT + plotH - ((v-minAcc)/((maxAcc-minAcc)||1))*plotH;
+
+  const step = plotW/n;
+  let bars='';
+  serie.forEach((s,i)=>{
+    const x = padL + i*step + (step-barW)/2;
+    if(s.entrada>0){
+      const h = (s.entrada/maxFlow)*(plotH*0.6);
+      bars += `<rect x="${x}" y="${baseY-h}" width="${barW/2}" height="${h}" fill="var(--steel)" opacity="0.85"/>`;
+    }
+    if(s.saida>0){
+      const h = (s.saida/maxFlow)*(plotH*0.6);
+      bars += `<rect x="${x+barW/2}" y="${baseY}" width="${barW/2}" height="${h}" fill="var(--brick)" opacity="0.85"/>`;
+    }
+  });
+
+  let path='';
+  serie.forEach((s,i)=>{
+    const x = padL + i*step + step/2;
+    const y = yAcc(s.acumulado);
+    path += (i===0?'M':'L')+x.toFixed(1)+','+y.toFixed(1)+' ';
+  });
+
+  const zeroY = yAcc(0);
+  const labelEvery = Math.ceil(n/10);
+  let labels='';
+  serie.forEach((s,i)=>{
+    if(i%labelEvery===0){
+      const x = padL + i*step + step/2;
+      labels += `<text x="${x}" y="${H-8}" font-size="9.5" fill="var(--ink-soft)" text-anchor="middle">${fmtMesAno(new Date(s.mes))}</text>`;
+    }
+  });
+
+  return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;">
+    <line x1="${padL}" y1="${zeroY}" x2="${W-padR}" y2="${zeroY}" stroke="var(--line)" stroke-width="1"/>
+    <line x1="${padL}" y1="${baseY}" x2="${W-padR}" y2="${baseY}" stroke="var(--line-soft)" stroke-width="1"/>
+    ${bars}
+    <path d="${path}" fill="none" stroke="var(--ink)" stroke-width="1.8"/>
+    ${labels}
+  </svg>`;
+}
+
+function recomputeTerreno(p){
+  const t = p.terreno;
+  const sinal = Number(t.sinal)||0, permuta = Number(t.permuta)||0, outros = Number(t.outrosCustos)||0;
+  const qtd = Number(t.qtdParcelas)||0;
+  if(t.modo==='auto_parcela'){
+    const total = Number(t.valorCompra)||0;
+    const restante = total - sinal - permuta - outros;
+    t.valorParcela = qtd>0 ? restante/qtd : 0;
+  } else {
+    const parcela = Number(t.valorParcela)||0;
+    t.valorCompra = sinal + qtd*parcela + permuta + outros;
+  }
+}
+
+function lblInfo(texto, chave){
+  return `${texto}<button type="button" class="info-btn" data-info="${chave}" title="Como é calculado">i</button>`;
+}
+
+function sidebarHTML(p, r, pos){
+  return `
+    <h2>Resultado</h2>
+    <div class="metric hero">
+      <span class="lbl">${lblInfo('Resultado líquido','resultado')}</span>
+      <span class="val ${pos?'pos':'neg'}">${fmtBRL(r.resultado)}</span>
+    </div>
+
+    <div class="sidebar-group-label">Receita e custos</div>
+    <div class="metric"><span class="lbl">${lblInfo('Receita total'+(r.investidoresNoResultado?' (venda direta + investidores)':' (venda direta)'),'receitaTotal')}</span><span class="val">${fmtBRL(r.receitaTotal)}</span></div>
+    <div class="metric"><span class="lbl">${lblInfo('Custo do terreno'+(r.permutaConsiderada?'':' (sem permuta)'),'custoTerreno')}</span><span class="val">${fmtBRL(r.custoTerrenoTotal)}</span></div>
+    <div class="metric"><span class="lbl">${lblInfo('Custo de obra','custoObra')}</span><span class="val">${fmtBRL(r.custoObraTotal)}</span></div>
+    <div class="metric"><span class="lbl">${lblInfo('Impostos sobre venda','impostos')}</span><span class="val">${fmtBRL(r.impostos)}</span></div>
+    <div class="metric"><span class="lbl">${lblInfo('Comissão'+(r.comissaoAbatida?'':' (não abatida)'),'comissao')}</span><span class="val">${fmtBRL(r.comissaoValor)}</span></div>
+    <div class="metric"><span class="lbl">${lblInfo('Custo total','custoTotal')}</span><span class="val">${fmtBRL(r.custoTotal)}</span></div>
+
+    <div class="sidebar-group-label">Indicadores</div>
+    <div class="metric"><span class="lbl">${lblInfo('Margem líquida','margem')}</span><span class="val ${r.margem>=0?'pos':'neg'}">${fmtPct(r.margem)}</span></div>
+    <div class="metric"><span class="lbl">${lblInfo('Retorno sobre caixa investido','roi')}</span><span class="val ${r.roi>=0?'pos':'neg'}">${fmtPct(r.roi)}</span></div>
+    <div class="metric"><span class="lbl">${lblInfo('Retorno sobre pico de investimento','roiPico')}</span><span class="val ${r.roiPico>=0?'pos':'neg'}">${fmtPct(r.roiPico)}</span></div>
+    <div class="metric"><span class="lbl">${lblInfo('Custo líquido por lote próprio','custoLote')}</span><span class="val">${fmtBRL(r.custoLiquidoPorLote)}</span></div>
+
+    <div class="sidebar-group-label">Caixa</div>
+    <div class="metric"><span class="lbl">${lblInfo('Caixa investido (fora permuta)','caixaInvestido')}</span><span class="val">${fmtBRL(r.investimentoCash)}</span></div>
+    <div class="metric"><span class="lbl">${lblInfo('Pico de investimento em caixa','picoInvestimento')}</span><span class="val neg">${fmtBRL(r.fluxo.picoInvestimento)}${r.fluxo.picoMes?` <span class="val-sub">(${fmtMesAno(new Date(r.fluxo.picoMes))})</span>`:''}</span></div>
+    ${r.terrenoForaDoFluxo ? `<div class="footnote" style="margin-top:-4px;">Não inclui a compra do terreno (${fmtBRL(r.custoTerrenoCash)}), que está fora do fluxo de caixa.</div>` : ''}
+    <div class="metric"><span class="lbl">${lblInfo('Início do retorno','inicioRetorno')}</span><span class="val ${r.fluxo.paybackMes?'pos':'neg'}">${r.fluxo.paybackMes?fmtMesAno(new Date(r.fluxo.paybackMes)):'Não atingido no período'}</span></div>
+    <div class="metric"><span class="lbl">${lblInfo('Data final do projeto','dataFinal')}</span><span class="val">${r.dataFinalProjeto?fmtMesAno(new Date(r.dataFinalProjeto)):'—'}</span></div>
+    <div class="metric"><span class="lbl">${lblInfo('Duração total do projeto','duracaoProjeto')}</span><span class="val">${fmtDuracao(r.duracaoProjetoMeses)}</span></div>
+
+    <div class="sidebar-group-label">Retorno financeiro (taxa: ${p.financeiro.taxaDescontoMensal}% a.m.)</div>
+    <div class="metric"><span class="lbl">${lblInfo('VPL do projeto','vpl')}</span><span class="val ${r.vpl>=0?'pos':'neg'}">${fmtBRL(r.vpl)}</span></div>
+    <div class="metric"><span class="lbl">${lblInfo('Índice de Lucratividade','indiceLucratividade')}</span><span class="val ${r.indiceLucratividade!==null&&r.indiceLucratividade>=1?'pos':'neg'}">${r.indiceLucratividade!==null?r.indiceLucratividade.toFixed(2):'—'}</span></div>
+    <div class="metric"><span class="lbl">${lblInfo('TIR mensal','tirMensal')}</span><span class="val ${r.tirMensal!==null&&r.tirMensal>=0?'pos':'neg'}">${r.tirMensal!==null?fmtPct(r.tirMensal):'Não encontrada'}</span></div>
+    <div class="footnote">Ajuste a taxa de desconto na tela de fluxo de caixa.</div>
+
+    <div style="margin-top:14px;">
+      ${pos
+        ? `<span class="badge good">Projeto atrativo</span>`
+        : `<span class="badge bad">Resultado negativo</span>`}
+      ${r.margem>=0 && r.margem<0.15 ? `<span class="badge warn" style="margin-left:6px;">Margem apertada</span>`:''}
+    </div>`;
+}
+
+function hintEntradaHTML(p, r){
+  const entradaPct = Number(p.vendas.condicao.entradaPct)||0;
+  const entradaParcelas = Math.max(Number(p.vendas.condicao.entradaParcelas)||1,1);
+  const entradaTotal = r.receitaLiquida * entradaPct/100;
+  const entradaPorLote = r.precoDiretaLiquido * entradaPct/100;
+  const entradaPorLoteParcela = entradaPorLote/entradaParcelas;
+  const parcelaTotal = entradaTotal/entradaParcelas;
+  const temDesconto = r.impostos>0 || (r.comissaoAbatida && r.comissaoValor>0);
+  return `Entrada total: <strong>${fmtBRL(entradaTotal)}</strong> (<strong>${fmtBRL(entradaPorLote)}</strong> por lote)`
+    + (entradaParcelas>1
+        ? ` — ${entradaParcelas}x de <strong>${fmtBRL(parcelaTotal)}</strong> (<strong>${fmtBRL(entradaPorLoteParcela)}</strong> por lote)`
+        : '')
+    + `, recebida a partir do início das vendas.`
+    + (temDesconto ? ` Valores já líquidos de impostos${r.comissaoAbatida?' e comissão':''}, iguais aos que aparecem no fluxo de caixa.` : '');
+}
+
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+/* ================= EVENTOS ================= */
+function bindEvents(){
+  const app = document.getElementById('app');
+
+  app.querySelectorAll('[data-open]').forEach(el=>{
+    el.addEventListener('click', async (e)=>{
+      if(e.target.closest('[data-del]') || e.target.closest('[data-export]') || e.target.closest('[data-relatorio]') || e.target.closest('[data-compare]') || e.target.closest('.card-compare')) return;
+      const id = el.getAttribute('data-open');
+      const p = state.projetos.find(x=>x.id===id);
+      state.atual = p; state.view='editor'; render();
+    });
+  });
+  app.querySelectorAll('[data-del]').forEach(el=>{
+    el.addEventListener('click', async (e)=>{
+      e.stopPropagation();
+      const id = el.getAttribute('data-del');
+      if(!(await confirmarAcao('Excluir este projeto? Essa ação não pode ser desfeita.'))) return;
+      await apagarProjeto(id);
+      state.projetos = state.projetos.filter(x=>x.id!==id);
+      projetosComparar.delete(id);
+      render();
+      mostrarAviso('Projeto excluído.', 'sucesso');
+    });
+  });
+  app.querySelectorAll('[data-export]').forEach(el=>{
+    el.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      const id = el.getAttribute('data-export');
+      const p = state.projetos.find(x=>x.id===id) || state.atual;
+      if(p) exportarProjetoArquivo(p);
+    });
+  });
+  app.querySelectorAll('[data-relatorio]').forEach(el=>{
+    el.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      const id = el.getAttribute('data-relatorio');
+      const p = state.projetos.find(x=>x.id===id) || state.atual;
+      if(p) abrirRelatorio(p);
+    });
+  });
+  const exportAllBtn = app.querySelector('[data-export-all]');
+  if(exportAllBtn) exportAllBtn.addEventListener('click', exportarTodosProjetos);
+
+  const logoutBtn = app.querySelector('[data-logout]');
+  if(logoutBtn) logoutBtn.addEventListener('click', async ()=>{
+    if(!(await confirmarAcao('Sair do sistema?'))) return;
+    await supabaseClient.auth.signOut();
+    mostrarLogin();
+  });
+
+  const trocarSenhaBtn = app.querySelector('[data-trocar-senha]');
+  if(trocarSenhaBtn) trocarSenhaBtn.addEventListener('click', async ()=>{
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.style.zIndex = '200';
+    overlay.innerHTML = `
+      <div class="modal-box" style="max-width:340px;">
+        <h2 style="font-size:16px;margin:0 0 12px;">Trocar senha</h2>
+        <div class="field" style="margin-bottom:14px;">
+          <label>Nova senha</label>
+          <input type="password" id="novaSenhaInput" placeholder="Mínimo 6 caracteres">
+        </div>
+        <div class="footnote" id="trocarSenhaAviso" style="margin-bottom:10px;"></div>
+        <div style="display:flex;justify-content:flex-end;gap:8px;">
+          <button class="ghost" id="trocarSenhaCancelar">Cancelar</button>
+          <button class="primary" id="trocarSenhaConfirmar">Salvar nova senha</button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+    overlay.querySelector('#trocarSenhaCancelar').addEventListener('click', ()=>overlay.remove());
+    overlay.querySelector('#trocarSenhaConfirmar').addEventListener('click', async ()=>{
+      const nova = overlay.querySelector('#novaSenhaInput').value;
+      const aviso = overlay.querySelector('#trocarSenhaAviso');
+      if(nova.length<6){ aviso.textContent = 'A senha precisa ter pelo menos 6 caracteres.'; aviso.style.color='var(--bad)'; return; }
+      const { error } = await supabaseClient.auth.updateUser({ password: nova });
+      if(error){ aviso.textContent = 'Não foi possível trocar a senha: '+error.message; aviso.style.color='var(--bad)'; return; }
+      overlay.remove();
+      mostrarAviso('Senha alterada com sucesso.', 'sucesso');
+    });
+  });
+
+  app.querySelectorAll('[data-compare]').forEach(el=>{
+    el.addEventListener('click', (e)=>e.stopPropagation());
+    el.addEventListener('change', ()=>{
+      const id = el.getAttribute('data-compare');
+      if(el.checked) projetosComparar.add(id); else projetosComparar.delete(id);
+      render();
+    });
+  });
+  const compareLimpar = app.querySelector('[data-compare-limpar]');
+  if(compareLimpar) compareLimpar.addEventListener('click', ()=>{ projetosComparar.clear(); render(); });
+  const compararAbrir = app.querySelector('[data-comparar-abrir]');
+  if(compararAbrir) compararAbrir.addEventListener('click', ()=>{ state.view='comparar'; render(); });
+
+  const importTrigger = app.querySelector('[data-import-trigger]');
+  const importInput = app.querySelector('#importInput');
+  if(importTrigger && importInput){
+    importTrigger.addEventListener('click', ()=> importInput.click());
+    importInput.addEventListener('change', async ()=>{
+      if(importInput.files && importInput.files[0]){
+        await importarArquivo(importInput.files[0]);
+        importInput.value = '';
+      }
+    });
+  }
+
+  const btnNew = app.querySelector('[data-new]');
+  if(btnNew) btnNew.addEventListener('click', async ()=>{
+    const p = novoProjeto('Novo projeto');
+    state.projetos.push(p);
+    await salvarProjeto(p);
+    await salvarLista(state.projetos.map(x=>x.id));
+    state.atual = p; state.view='editor'; render();
+  });
+
+  const back = app.querySelector('[data-back]');
+  if(back) back.addEventListener('click', ()=>{ state.view='lista'; state.atual=null; render(); });
+
+  const openFluxo = app.querySelector('[data-open-fluxo]');
+  if(openFluxo) openFluxo.addEventListener('click', ()=>{ state.view='fluxo'; render(); });
+
+  const backEditor = app.querySelector('[data-back-editor]');
+  if(backEditor) backEditor.addEventListener('click', ()=>{ state.view='editor'; render(); });
+
+  const abrirPrevisao = app.querySelector('[data-abrir-previsao]');
+  if(abrirPrevisao) abrirPrevisao.addEventListener('click', abrirModalPrevisao);
+
+  const abrirCronograma = app.querySelector('[data-abrir-cronograma]');
+  if(abrirCronograma) abrirCronograma.addEventListener('click', abrirModalCronograma);
+
+  const abrirEstimativa = app.querySelector('[data-abrir-estimativa]');
+  if(abrirEstimativa) abrirEstimativa.addEventListener('click', abrirModalEstimativa);
+
+  const titleInput = app.querySelector('#titleInput');
+  if(titleInput) titleInput.addEventListener('change', async ()=>{
+    state.atual.nome = titleInput.value || 'Sem título';
+    await salvarProjeto(state.atual);
+  });
+
+  app.querySelectorAll('[data-f]').forEach(el=>{
+    el.addEventListener('input', async ()=>{
+      const fieldPath = el.getAttribute('data-f');
+      const path = fieldPath.split('.');
+      let obj = state.atual;
+      for(let i=0;i<path.length-1;i++) obj = obj[path[i]];
+      const key = path[path.length-1];
+      const isDate = el.type==='date';
+      const isMoney = el.classList.contains('money-in');
+      const isText = !isDate && !isMoney && (el.tagName==='TEXTAREA' || el.type==='text');
+      obj[key] = isDate ? el.value : isMoney ? parseMoneyBR(el.value) : isText ? el.value : (el.value===''? 0 : Number(el.value));
+
+      if(path[0]==='terreno' && ['sinal','permuta','outrosCustos','qtdParcelas','valorParcela','valorCompra'].includes(key)){
+        recomputeTerreno(state.atual);
+        const app2 = document.getElementById('app');
+        const outroCampo = state.atual.terreno.modo==='auto_parcela' ? 'terreno.valorParcela' : 'terreno.valorCompra';
+        if(fieldPath!==outroCampo){
+          const outroEl = app2.querySelector(`[data-f="${outroCampo}"]`);
+          if(outroEl) outroEl.value = fmtMoneyInput(state.atual.terreno[outroCampo.split('.')[1]]);
+        }
+      }
+
+      await salvarProjeto(state.atual);
+      if(fieldPath==='financeiro.taxaDescontoMensal'){
+        atualizarRetornoFinanceiro();
+      } else if(fieldPath==='observacoes'){
+        // campo livre, sem impacto em nenhum cálculo — não precisa re-renderizar
+      } else {
+        renderSidebarAndChart();
+      }
+    });
+    if(el.classList.contains('money-in')){
+      el.addEventListener('blur', ()=>{ el.value = fmtMoneyInput(parseMoneyBR(el.value)); });
+      el.addEventListener('focus', ()=>{ el.select(); });
+    }
+    if(el.getAttribute('data-f')==='obra.inicioObra' || el.getAttribute('data-f')==='vendas.inicioVendas'){
+      el.addEventListener('change', ()=>{
+        const p = state.atual;
+        if(el.getAttribute('data-f')==='obra.inicioObra'){
+          const temCronograma = p.custos.some(c=>c.cronograma && c.cronograma.length>0);
+          if(temCronograma) mostrarAviso('Início da obra alterado — os lançamentos do cronograma de desembolso foram realocados automaticamente para os novos meses.', 'info');
+        } else {
+          if(p.vendas.previsao && p.vendas.previsao.length>0) mostrarAviso('Início das vendas alterado — a previsão de vendas foi realocada automaticamente para os novos meses.', 'info');
+        }
+      });
+    }
+  });
+
+  app.querySelectorAll('[data-select]').forEach(el=>{
+    el.addEventListener('change', async ()=>{
+      const path = el.getAttribute('data-select').split('.');
+      let obj = state.atual;
+      for(let i=0;i<path.length-1;i++) obj = obj[path[i]];
+      const key = path[path.length-1];
+      const isBool = el.hasAttribute('data-booltype');
+      obj[key] = isBool ? (el.value==='true') : el.value;
+      if(path[0]==='terreno' && key==='modo') recomputeTerreno(state.atual);
+      await salvarProjeto(state.atual);
+      renderFull();
+    });
+  });
+
+  app.querySelectorAll('h2.panel-h[data-panel-id]').forEach(h2=>{
+    h2.addEventListener('click', ()=>{
+      const id = h2.getAttribute('data-panel-id');
+      paineisColapsados[id] = !paineisColapsados[id];
+      h2.closest('.panel').classList.toggle('collapsed', paineisColapsados[id]);
+    });
+  });
+
+  const recolherTudo = app.querySelector('[data-recolher-tudo]');
+  if(recolherTudo) recolherTudo.addEventListener('click', ()=>{
+    app.querySelectorAll('h2.panel-h[data-panel-id]').forEach(h2=>{
+      const id = h2.getAttribute('data-panel-id');
+      paineisColapsados[id] = true;
+      h2.closest('.panel').classList.add('collapsed');
+    });
+  });
+  const expandirTudo = app.querySelector('[data-expandir-tudo]');
+  if(expandirTudo) expandirTudo.addEventListener('click', ()=>{
+    app.querySelectorAll('h2.panel-h[data-panel-id]').forEach(h2=>{
+      const id = h2.getAttribute('data-panel-id');
+      paineisColapsados[id] = false;
+      h2.closest('.panel').classList.remove('collapsed');
+    });
+  });
+
+  const toggleTabela = app.querySelector('[data-toggle-tabela]');
+  if(toggleTabela) toggleTabela.addEventListener('click', ()=>{
+    tabelaFluxoAberta = !tabelaFluxoAberta;
+    const wrap = app.querySelector('.fluxo-table-wrap');
+    if(wrap) wrap.style.display = tabelaFluxoAberta ? 'block' : 'none';
+    toggleTabela.textContent = tabelaFluxoAberta ? 'Ocultar lançamentos mês a mês' : 'Ver lançamentos mês a mês';
+  });
+
+  app.querySelectorAll('[data-fc]').forEach(el=>{
+    el.addEventListener('change', async ()=>{
+      const path = el.getAttribute('data-fc').split('.');
+      let obj = state.atual;
+      for(let i=0;i<path.length-1;i++) obj = obj[path[i]];
+      obj[path[path.length-1]] = el.checked;
+      await salvarProjeto(state.atual);
+      renderSidebarAndChart();
+    });
+  });
+
+  app.querySelectorAll('[data-fc-full]').forEach(el=>{
+    el.addEventListener('change', async ()=>{
+      const path = el.getAttribute('data-fc-full').split('.');
+      let obj = state.atual;
+      for(let i=0;i<path.length-1;i++) obj = obj[path[i]];
+      obj[path[path.length-1]] = el.checked;
+      await salvarProjeto(state.atual);
+      renderFull();
+    });
+  });
+
+  app.querySelectorAll('[data-costfield]').forEach(el=>{
+    el.addEventListener('input', async ()=>{
+      const idx = Number(el.getAttribute('data-idx'));
+      const field = el.getAttribute('data-costfield');
+      state.atual.custos[idx][field] = field==='valor' ? parseMoneyBR(el.value) : el.value;
+      await salvarProjeto(state.atual);
+      if(field==='valor') renderSidebarAndChart(); else renderFull();
+    });
+    if(el.classList.contains('money-in')){
+      el.addEventListener('blur', ()=>{ el.value = fmtMoneyInput(parseMoneyBR(el.value)); });
+      el.addEventListener('focus', ()=>{ el.select(); });
+    }
+  });
+
+  app.querySelectorAll('[data-rmrow]').forEach(el=>{
+    el.addEventListener('click', async ()=>{
+      const idx = Number(el.getAttribute('data-rmrow'));
+      state.atual.custos.splice(idx,1);
+      await salvarProjeto(state.atual);
+      renderFull();
+    });
+  });
+
+  const addRow = app.querySelector('[data-addrow]');
+  if(addRow) addRow.addEventListener('click', async ()=>{
+    state.atual.custos.push({item:'Novo item', valor:0});
+    await salvarProjeto(state.atual);
+    renderFull();
+  });
+
+  const dup = app.querySelector('[data-dup]');
+  if(dup) dup.addEventListener('click', async ()=>{
+    const clone = JSON.parse(JSON.stringify(state.atual));
+    clone.id = 'p_'+Date.now()+'_'+Math.random().toString(36).slice(2,7);
+    clone.nome = state.atual.nome + ' (cópia)';
+    state.projetos.push(clone);
+    await salvarProjeto(clone);
+    await salvarLista(state.projetos.map(x=>x.id));
+    state.atual = clone; render();
+  });
+
+  const delCur = app.querySelector('[data-del-current]');
+  if(delCur) delCur.addEventListener('click', async ()=>{
+    if(!(await confirmarAcao('Excluir este projeto? Essa ação não pode ser desfeita.'))) return;
+    await apagarProjeto(state.atual.id);
+    state.projetos = state.projetos.filter(x=>x.id!==state.atual.id);
+    projetosComparar.delete(state.atual.id);
+    state.view='lista'; state.atual=null; render();
+    mostrarAviso('Projeto excluído.', 'sucesso');
+  });
+}
+
+function renderFull(){ render(); }
+
+/* re-render leve: apenas resultado + gráfico, preservando foco do campo em edição */
+function atualizarRetornoFinanceiro(){
+  const p = state.atual;
+  const r = calcular(p);
+  const vplEl = document.querySelector('[data-vpl-valor]');
+  if(vplEl){ vplEl.textContent = fmtBRL(r.vpl); vplEl.className = `val ${r.vpl>=0?'pos':'neg'}`; }
+  const ilEl = document.querySelector('[data-il-valor]');
+  if(ilEl){ ilEl.textContent = r.indiceLucratividade!==null?r.indiceLucratividade.toFixed(2):'—'; ilEl.className = `val ${r.indiceLucratividade!==null&&r.indiceLucratividade>=1?'pos':'neg'}`; }
+  const tirMEl = document.querySelector('[data-tir-mensal-valor]');
+  if(tirMEl){ tirMEl.textContent = r.tirMensal!==null?fmtPct(r.tirMensal):'Não encontrada'; tirMEl.className = `val ${r.tirMensal!==null&&r.tirMensal>=0?'pos':'neg'}`; }
+  const tirAEl = document.querySelector('[data-tir-anual-valor]');
+  if(tirAEl){ tirAEl.textContent = r.tirAnual!==null?fmtPct(r.tirAnual):'Não encontrada'; tirAEl.className = `val ${r.tirAnual!==null&&r.tirAnual>=0?'pos':'neg'}`; }
+}
+
+function renderSidebarAndChart(){
+  const active = document.activeElement;
+  const activeSel = active && active.getAttribute ? active.getAttribute('data-f') : null;
+  const app = document.getElementById('app');
+  const wrap = app.querySelector('.layout');
+  if(!wrap){ render(); return; }
+  const p = state.atual;
+  const r = calcular(p);
+  const pos = r.resultado>=0;
+
+  const sidebar = wrap.querySelector('div[style*="sticky"] section.panel');
+  if(sidebar){
+    sidebar.innerHTML = sidebarHTML(p, r, pos);
+  }
+  const chartWrap = wrap.querySelector('.chart-wrap');
+  if(chartWrap) chartWrap.innerHTML = renderChart(r.fluxo.serie);
+  const tabelaWrap = wrap.querySelector('.fluxo-table-wrap');
+  if(tabelaWrap) tabelaWrap.innerHTML = renderTabelaFluxo(r.fluxo.serie);
+
+  const obraTable = wrap.querySelector('table.costs');
+  if(obraTable){
+    const cell = obraTable.querySelector('tr.total td[style]');
+    if(cell) cell.textContent = fmtBRL(r.custoObraTotal);
+  }
+  const hintLotes = wrap.querySelector('.hint-lotes');
+  if(hintLotes) hintLotes.innerHTML = `Lotes próprios restantes para venda: <strong>${r.lotesPropios}</strong>`;
+  const hintComissao = wrap.querySelector('.hint-comissao');
+  if(hintComissao) hintComissao.innerHTML = `Comissão por lote: <strong>${fmtBRL(r.comissaoPorLote)}</strong> · total sobre ${r.qtdDireta} lotes: <strong>${fmtBRL(r.comissaoValor)}</strong>
+    ${r.comissaoAbatida ? `<span class="badge bad" style="margin-left:6px;">Abatida do resultado</span>` : `<span class="badge warn" style="margin-left:6px;">Apenas informativa</span>`}`;
+  const calcInputs = wrap.querySelectorAll('input.calc[readonly]');
+  calcInputs.forEach(el=>{
+    const label = el.closest('.field') ? el.closest('.field').querySelector('label').textContent : '';
+    if(label.includes('Qtd. lotes vendidos')) el.value = r.qtdDireta;
+    if(label.includes('Preço por lote')) el.value = fmtMoneyInput(r.precoDireta);
+  });
+  const hintReceita = wrap.querySelector('.metric-inline');
+  if(hintReceita) hintReceita.innerHTML = `Receita total do projeto <strong class="${r.receitaDireta>=0?'pos':'neg'}">${fmtBRL(r.receitaDireta)}</strong>`;
+  const hintEntrada = wrap.querySelector('.hint-entrada');
+  if(hintEntrada) hintEntrada.innerHTML = hintEntradaHTML(p, r);
+  const hintInvest = wrap.querySelector('.hint-investidores');
+  if(hintInvest) hintInvest.innerHTML = `Valor movimentado com investidores: <strong>${fmtBRL(r.receitaInvestidores)}</strong> ${r.investidoresNoResultado ? `<span class="badge good" style="margin-left:6px;">Somando à receita do projeto</span>` : `<span class="badge warn" style="margin-left:6px;">Não soma à receita do projeto</span>`} ${p.vendas.investidores.considerarNoFluxo ? `<span class="badge good" style="margin-left:6px;">No fluxo de caixa</span>` : `<span class="badge warn" style="margin-left:6px;">Fora do fluxo de caixa</span>`}`;
+  if(activeSel){
+    const el = wrap.querySelector(`[data-f="${activeSel}"]`);
+    if(el) el.focus();
+  }
+}
+
+document.addEventListener('click', function(e){
+  const row = e.target.closest('.fluxo-mes-row');
+  if(row){
+    const idx = row.getAttribute('data-fluxo-mes');
+    const detalhe = document.querySelector(`.fluxo-detalhe-row[data-fluxo-detalhe="${idx}"]`);
+    if(detalhe){
+      const abrindo = detalhe.style.display === 'none';
+      detalhe.style.display = abrindo ? 'table-row' : 'none';
+      row.classList.toggle('aberta', abrindo);
+    }
+    return;
+  }
+  const infoBtn = e.target.closest('.info-btn');
+  if(infoBtn){
+    e.stopPropagation();
+    abrirInfoIndicador(infoBtn.getAttribute('data-info'));
+  }
+});
+
+/* ================= AUTENTICAÇÃO E ARMAZENAMENTO (SUPABASE) ================= */
+const SUPABASE_URL = 'https://fhfnpnrxjuhfqhimbylp.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_1Y9NY7_9M1JZAgNf_AnUsA_60dmM_kc';
+const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+function usuarioParaEmail(usuario){
+  return usuario.trim().toLowerCase().replace(/[^a-z0-9._-]/g,'') + '@estudo.local';
+}
+
+/* Shim: substitui o antigo window.storage (Claude) por chamadas reais ao Supabase,
+   mantendo exatamente a mesma assinatura usada em todo o resto do sistema. */
+window.storage = {
+  async get(key){
+    const { data, error } = await supabaseClient.from('kv_store').select('value').eq('key', key).maybeSingle();
+    if(error) throw error;
+    if(!data) return null;
+    return { key, value: JSON.stringify(data.value), shared:true };
+  },
+  async set(key, value){
+    const parsed = typeof value==='string' ? JSON.parse(value) : value;
+    const { error } = await supabaseClient.from('kv_store').upsert({ key, value: parsed, updated_at: new Date().toISOString() });
+    if(error) throw error;
+    return { key, value, shared:true };
+  },
+  async delete(key){
+    const { error } = await supabaseClient.from('kv_store').delete().eq('key', key);
+    if(error) throw error;
+    return { key, deleted:true, shared:true };
+  },
+  async list(prefix){
+    let query = supabaseClient.from('kv_store').select('key');
+    if(prefix) query = query.like('key', prefix+'%');
+    const { data, error } = await query;
+    if(error) throw error;
+    return { keys:(data||[]).map(r=>r.key), prefix, shared:true };
+  }
+};
+
+function mostrarApp(){
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  init();
+}
+function mostrarLogin(msgErro){
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('loginScreen').style.display = 'flex';
+  const erroEl = document.getElementById('loginErro');
+  if(msgErro){ erroEl.textContent = msgErro; erroEl.style.display = 'block'; }
+  else { erroEl.style.display = 'none'; }
+}
+async function tentarLogin(){
+  const usuario = document.getElementById('loginUsuario').value;
+  const senha = document.getElementById('loginSenha').value;
+  if(!usuario.trim() || !senha){ mostrarLogin('Preencha usuário e senha.'); return; }
+  const botao = document.getElementById('loginBotao');
+  botao.disabled = true; botao.textContent = 'Entrando...';
+  const { error } = await supabaseClient.auth.signInWithPassword({ email: usuarioParaEmail(usuario), password: senha });
+  botao.disabled = false; botao.textContent = 'Entrar';
+  if(error){ mostrarLogin('Usuário ou senha incorretos.'); return; }
+  mostrarApp();
+}
+document.getElementById('loginBotao').addEventListener('click', tentarLogin);
+document.getElementById('loginSenha').addEventListener('keydown', e=>{ if(e.key==='Enter') tentarLogin(); });
+document.getElementById('loginUsuario').addEventListener('keydown', e=>{ if(e.key==='Enter') document.getElementById('loginSenha').focus(); });
+
+async function verificarSessao(){
+  const { data } = await supabaseClient.auth.getSession();
+  if(data && data.session) mostrarApp();
+  else mostrarLogin();
+}
+verificarSessao();
+</script>
+</body>
+</html>
