@@ -231,6 +231,11 @@
   .login-erro{
     background:var(--bad-bg);color:var(--bad);border-radius:6px;padding:8px 10px;font-size:12.5px;margin-top:8px;
   }
+  .rel-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:6px 20px;}
+  .rel-item{padding:6px 0;border-bottom:1px solid var(--line-soft);display:flex;justify-content:space-between;gap:10px;font-size:12.5px;}
+  .rel-item .l{color:var(--ink-soft);}
+  .rel-item .v{font-family:var(--mono);font-weight:700;text-align:right;}
+
   .obs-textarea{
     width:100%;min-height:160px;resize:vertical;font-family:var(--sans);font-size:13px;line-height:1.5;
     border:1px solid var(--line);border-radius:6px;padding:10px 12px;background:var(--paper);color:var(--ink);
@@ -420,27 +425,47 @@ const ITENS_PADRAO = [
   ["Paisagismo",100000],["Outros",0]
 ];
 
-/* ---- Banco de referência de custos estimados (R$/m² de área do terreno) ----
-   Valores de partida baseados em padrões gerais de mercado para urbanização de loteamentos.
-   NÃO vêm de uma base de dados online (o sistema roda todo offline) — são uma estimativa
-   inicial que precisa ser calibrada com orçamentos reais da sua região antes de decidir algo. */
+/* ---- Motor urbanístico e banco de referência de custos (Auto) ----
+   Percentuais e taxas de partida baseados em padrões de mercado para a região de Fortaleza/CE,
+   informados pela Lei de Uso e Ocupação do Solo de Fortaleza (LC 236/2017 — percentual de
+   doação de 20% para arruamento e limite de 15% da gleba para o sistema viário estrutural).
+   NÃO são um cálculo legal exato: cada município define seus próprios percentuais mínimos de
+   área pública, então isso é só um ponto de partida pra especular — sempre editável, e o
+   percentual real precisa ser confirmado na lei do seu município antes de qualquer decisão.
+   O sistema roda todo offline, sem base de dados online em tempo real. */
+const URBANISTICO_PADRAO = {
+  pctViario: 20,
+  pctVerdeInstitucional: 12,
+  fatorAproveitamento: 90,
+};
+const MULTIPLICADOR_TOPOGRAFIA = [
+  { id:'plano', nome:'Plano', mult:1.0 },
+  { id:'ondulado', nome:'Aclive/Declive Leve', mult:1.3 },
+  { id:'montanhoso', nome:'Aclive/Declive Acentuado', mult:1.7 },
+];
+const OPCOES_PADRAO_EMPREENDIMENTO = [
+  { id:'economico', nome:'Econômico', portaria:60000, clube:0 },
+  { id:'medio', nome:'Médio', portaria:120000, clube:350000 },
+  { id:'alto', nome:'Alto', portaria:220000, clube:700000 },
+];
+/* tipo: 'area_total' | 'area_viaria' | 'area_verde_institucional' | 'por_lote' | 'fixo'
+   topografia: true → a taxa é multiplicada pelo multiplicador de topografia escolhido */
 const BANCO_CUSTOS_REFERENCIA = [
-  { item:'Topografia', taxa:0.90 },
-  { item:'Licença de supressão vegetal', taxa:1.80 },
-  { item:'Supressão vegetal', taxa:2.20 },
-  { item:'Despachantes', taxa:3.50 },
-  { item:'Marketing', taxa:1.00 },
-  { item:'Terraplenagem', taxa:9.00 },
-  { item:'Drenagem geral', taxa:6.50 },
-  { item:'Pavimentação', taxa:22.00 }, // sobrescrito conforme o tipo escolhido
-  { item:'Meio-fio', taxa:5.50 },
-  { item:'Rede de água', taxa:8.00 },
-  { item:'Energia / iluminação pública', taxa:7.50 },
-  { item:'Portaria', taxa:1.20 },
-  { item:'Clube', taxa:3.50 },
-  { item:'Área institucional', taxa:2.80 },
-  { item:'Muro', taxa:4.50 },
-  { item:'Paisagismo', taxa:1.60 },
+  { item:'Topografia', tipo:'area_total', taxa:0.90 },
+  { item:'Licença de supressão vegetal', tipo:'area_total', taxa:1.80 },
+  { item:'Supressão vegetal', tipo:'area_total', taxa:2.20, topografia:true },
+  { item:'Despachantes', tipo:'area_total', taxa:3.50 },
+  { item:'Marketing', tipo:'area_total', taxa:1.00 },
+  { item:'Terraplenagem', tipo:'area_total', taxa:9.00, topografia:true },
+  { item:'Muro', tipo:'area_total', taxa:4.50 },
+  { item:'Drenagem geral', tipo:'area_viaria', taxa:14.00 },
+  { item:'Pavimentação', tipo:'area_viaria', taxa:22.00 }, // sobrescrito conforme o tipo escolhido
+  { item:'Meio-fio', tipo:'area_viaria', taxa:9.00 },
+  { item:'Rede de água', tipo:'por_lote', taxa:1800 },
+  { item:'Rede de esgoto', tipo:'por_lote', taxa:2200 },
+  { item:'Energia / iluminação pública', tipo:'por_lote', taxa:1500 },
+  { item:'Paisagismo', tipo:'area_verde_institucional', taxa:12.00 },
+  { item:'Área institucional', tipo:'area_verde_institucional', taxa:18.00 },
 ];
 const OPCOES_PAVIMENTACAO = [
   { id:'asfalto', nome:'Asfalto (CBUQ)', taxa:22.00 },
@@ -1881,7 +1906,7 @@ function renderEditor(p){
 
         <section class="panel ${paineisColapsados['custos']?'collapsed':''}" id="painel-custos">
           <h2 class="panel-h" data-panel-id="custos">Custos de obra e infraestrutura <i class="chevron">▾</i></h2>
-          <button class="btn-estimativa" data-abrir-estimativa="1">Gerar orçamento estimado a partir da área →</button>
+          <button class="btn-estimativa" data-abrir-estimativa="1">⚡ Auto — gerar orçamento urbanístico estimado</button>
           <table class="costs" style="margin-top:12px;">
             <tr><th>Item</th><th style="text-align:right">Valor (R$)</th><th></th></tr>
             ${custosRows}
@@ -1912,50 +1937,115 @@ function renderEditor(p){
 let tabelaFluxoAberta = false;
 let paineisColapsados = {};
 
-/* ================= MODAL: ORÇAMENTO ESTIMADO POR ÁREA ================= */
+/* ================= MODAL: AUTO — MOTOR URBANÍSTICO E ORÇAMENTO ESTIMADO ================= */
+let estimativaParams = {};
 let estimativaGrid = [];
-let estimativaPavimentacao = 'asfalto';
+
+function calcularMotorUrbanistico(p, params){
+  const areaTotal = Number(p.terreno.area)||0;
+  const pctViario = Number(params.pctViario)||0;
+  const pctVerdeInst = Number(params.pctVerdeInstitucional)||0;
+  const fatorAproveitamento = Number(params.fatorAproveitamento)||100;
+
+  const areaViaria = areaTotal * pctViario/100;
+  const areaVerdeInst = areaTotal * pctVerdeInst/100;
+  const areaPublicaTotal = areaViaria + areaVerdeInst;
+  const alvBruta = Math.max(areaTotal - areaPublicaTotal, 0);
+  const alvLiquida = alvBruta * fatorAproveitamento/100;
+  const tamanhoLote = Math.max(Number(params.tamanhoLote)||1,1);
+  const qtdLotesEstimada = Math.floor(alvLiquida / tamanhoLote);
+
+  return { areaTotal, areaViaria, areaVerdeInst, areaPublicaTotal, alvBruta, alvLiquida, qtdLotesEstimada };
+}
+
+function gerarGridEstimativa(p, params){
+  const urb = calcularMotorUrbanistico(p, params);
+  const multTopo = MULTIPLICADOR_TOPOGRAFIA.find(m=>m.id===params.topografia) || MULTIPLICADOR_TOPOGRAFIA[0];
+  const padrao = OPCOES_PADRAO_EMPREENDIMENTO.find(o=>o.id===params.padrao) || OPCOES_PADRAO_EMPREENDIMENTO[0];
+  const pavimento = OPCOES_PAVIMENTACAO.find(o=>o.id===params.pavimentacao) || OPCOES_PAVIMENTACAO[0];
+
+  const linhas = BANCO_CUSTOS_REFERENCIA.map(ref=>{
+    let taxa = ref.item==='Pavimentação' ? pavimento.taxa : ref.taxa;
+    let base, valor;
+    if(ref.tipo==='area_total'){ base = urb.areaTotal; valor = taxa*base*(ref.topografia?multTopo.mult:1); }
+    else if(ref.tipo==='area_viaria'){ base = urb.areaViaria; valor = taxa*base; }
+    else if(ref.tipo==='area_verde_institucional'){ base = urb.areaVerdeInst; valor = taxa*base; }
+    else if(ref.tipo==='por_lote'){ base = urb.qtdLotesEstimada; valor = taxa*base; }
+    else { base = 1; valor = taxa; }
+    return { item:ref.item, tipo:ref.tipo, topografia:!!ref.topografia, taxa, base, valor: round2(valor) };
+  });
+  linhas.push({ item:'Portaria', tipo:'fixo', topografia:false, taxa:padrao.portaria, base:1, valor:padrao.portaria });
+  if(padrao.clube>0) linhas.push({ item:'Clube', tipo:'fixo', topografia:false, taxa:padrao.clube, base:1, valor:padrao.clube });
+  return linhas;
+}
 
 function abrirModalEstimativa(){
   const p = state.atual;
-  estimativaPavimentacao = 'asfalto';
-  estimativaGrid = BANCO_CUSTOS_REFERENCIA.map(ref=>({
-    item: ref.item,
-    taxa: ref.item==='Pavimentação' ? OPCOES_PAVIMENTACAO.find(o=>o.id==='asfalto').taxa : ref.taxa
-  }));
+  estimativaParams = {
+    topografia: 'plano',
+    tamanhoLote: 200,
+    padrao: 'medio',
+    pavimentacao: 'asfalto',
+    pctViario: URBANISTICO_PADRAO.pctViario,
+    pctVerdeInstitucional: URBANISTICO_PADRAO.pctVerdeInstitucional,
+    fatorAproveitamento: URBANISTICO_PADRAO.fatorAproveitamento,
+  };
+  estimativaGrid = gerarGridEstimativa(p, estimativaParams);
   renderModalEstimativa();
 }
 function fecharModalEstimativa(){
   const overlay = document.querySelector('.modal-overlay-estimativa');
   if(overlay) overlay.remove();
 }
+function tipoLabel(tipo){
+  return { area_total:'Área total', area_viaria:'Área viária', area_verde_institucional:'Área verde/institucional', por_lote:'Por lote', fixo:'Fixo (padrão)' }[tipo] || tipo;
+}
 function renderModalEstimativa(){
   fecharModalEstimativa();
   const p = state.atual;
   const area = Number(p.terreno.area)||0;
+  const urb = calcularMotorUrbanistico(p, estimativaParams);
 
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay modal-overlay-estimativa';
   overlay.innerHTML = `
-    <div class="modal-box wide" style="position:relative;">
+    <div class="modal-box wide" style="position:relative;max-width:760px;">
       <div class="modal-header">
         <div>
-          <h2>Orçamento estimado a partir da área</h2>
-          <div class="footnote" style="margin:2px 0 0;">Área do terreno: <strong>${area.toLocaleString('pt-BR')} m²</strong>. As taxas abaixo são uma estimativa inicial de referência de mercado — não vêm de uma base online em tempo real (o sistema roda offline) — calibre com orçamentos reais antes de decidir algo.</div>
+          <h2>Auto — orçamento urbanístico estimado</h2>
+          <div class="footnote" style="margin:2px 0 0;">Área do terreno: <strong>${area.toLocaleString('pt-BR')} m²</strong>. Os percentuais de área pública são uma referência de mercado pra região de Fortaleza/CE — cada município define o percentual mínimo exigido na própria lei, então confirme com a lei do seu município antes de decidir algo. O sistema roda offline, sem base de dados online em tempo real.</div>
         </div>
         <button class="modal-close" data-fechar-estimativa="1">✕</button>
       </div>
 
-      <div class="field-row" style="margin-bottom:10px;">
-        <div class="field">
-          <label>Tipo de pavimentação</label>
-          <select id="estimativaPavimentacaoSel">
-            ${OPCOES_PAVIMENTACAO.map(o=>`<option value="${o.id}" ${estimativaPavimentacao===o.id?'selected':''}>${o.nome} (R$ ${o.taxa.toFixed(2)}/m²)</option>`).join('')}
+      <div class="subhead" style="margin-top:0;">Parâmetros</div>
+      <div class="field-row">
+        <div class="field"><label>Topografia</label>
+          <select id="estParamTopografia">
+            ${MULTIPLICADOR_TOPOGRAFIA.map(m=>`<option value="${m.id}" ${estimativaParams.topografia===m.id?'selected':''}>${m.nome} (×${m.mult.toFixed(1)})</option>`).join('')}
           </select>
         </div>
+        <div class="field"><label>Tamanho médio do lote (m²)</label><input type="number" id="estParamTamanhoLote" value="${estimativaParams.tamanhoLote}"></div>
+        <div class="field"><label>Padrão do empreendimento</label>
+          <select id="estParamPadrao">
+            ${OPCOES_PADRAO_EMPREENDIMENTO.map(o=>`<option value="${o.id}" ${estimativaParams.padrao===o.id?'selected':''}>${o.nome}</option>`).join('')}
+          </select>
+        </div>
+        <div class="field"><label>Tipo de pavimentação</label>
+          <select id="estParamPavimentacao">
+            ${OPCOES_PAVIMENTACAO.map(o=>`<option value="${o.id}" ${estimativaParams.pavimentacao===o.id?'selected':''}>${o.nome} (R$ ${o.taxa.toFixed(2)}/m²)</option>`).join('')}
+          </select>
+        </div>
+        <div class="field"><label>% viário (área total)</label><input type="number" step="0.1" id="estParamPctViario" value="${estimativaParams.pctViario}"></div>
+        <div class="field"><label>% verde + institucional</label><input type="number" step="0.1" id="estParamPctVerde" value="${estimativaParams.pctVerdeInstitucional}"></div>
+        <div class="field"><label>Fator de aproveitamento da ALV (%)</label><input type="number" step="1" id="estParamFator" value="${estimativaParams.fatorAproveitamento}"></div>
       </div>
 
-      <div class="cronograma-scroll" style="max-height:50vh;" id="estimativaTabelaWrap"></div>
+      <div class="subhead">Divisão da gleba (prévia)</div>
+      <div class="rel-grid" id="estUrbanisticoResumo" style="margin-bottom:12px;"></div>
+
+      <div class="subhead">Rateio de custos</div>
+      <div class="cronograma-scroll" style="max-height:42vh;" id="estimativaTabelaWrap"></div>
 
       <div class="previsao-total-bar" style="margin-top:10px;">
         <span>Total estimado</span>
@@ -1964,73 +2054,81 @@ function renderModalEstimativa(){
 
       <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px;">
         <button class="ghost" data-fechar-estimativa="1">Cancelar</button>
-        <button class="primary" data-estimativa-aplicar="1">Aplicar ao orçamento</button>
+        <button class="primary" data-estimativa-aplicar="1">Aplicar ao projeto</button>
       </div>
     </div>`;
   document.body.appendChild(overlay);
 
-  renderEstimativaTabela();
-
-  overlay.querySelector('#estimativaPavimentacaoSel').addEventListener('change', (e)=>{
-    estimativaPavimentacao = e.target.value;
-    const nova = OPCOES_PAVIMENTACAO.find(o=>o.id===estimativaPavimentacao);
-    const linha = estimativaGrid.find(l=>l.item==='Pavimentação');
-    if(linha && nova) linha.taxa = nova.taxa;
-    renderEstimativaTabela();
+  ['estParamTopografia','estParamTamanhoLote','estParamPadrao','estParamPavimentacao','estParamPctViario','estParamPctVerde','estParamFator'].forEach(id=>{
+    overlay.querySelector('#'+id).addEventListener('input', atualizarParametrosEstimativa);
+    overlay.querySelector('#'+id).addEventListener('change', atualizarParametrosEstimativa);
   });
 
   overlay.querySelectorAll('[data-fechar-estimativa]').forEach(el=>el.addEventListener('click', fecharModalEstimativa));
 
   overlay.querySelector('[data-estimativa-aplicar]').addEventListener('click', async ()=>{
+    const urbFinal = calcularMotorUrbanistico(state.atual, estimativaParams);
+    state.atual.lotes.totalLotes = urbFinal.qtdLotesEstimada;
     estimativaGrid.forEach(linha=>{
-      const valor = round2((Number(linha.taxa)||0) * area);
       const existente = state.atual.custos.find(c=>c.item.toLowerCase()===linha.item.toLowerCase());
-      if(existente) existente.valor = valor;
-      else state.atual.custos.push({ item: linha.item, valor, cronograma:[] });
+      if(existente) existente.valor = linha.valor;
+      else state.atual.custos.push({ item: linha.item, valor: linha.valor, cronograma:[] });
     });
     await salvarProjeto(state.atual);
     fecharModalEstimativa();
     renderFull();
-    mostrarAviso('Orçamento estimado aplicado. Revise os valores antes de usar no estudo final.', 'sucesso');
+    mostrarAviso(`Orçamento aplicado — ${urbFinal.qtdLotesEstimada} lotes estimados. Revise os valores antes de usar no estudo final.`, 'sucesso');
   });
+
+  renderEstimativaResumoUrbanistico();
+  renderEstimativaTabela();
+}
+function atualizarParametrosEstimativa(){
+  const overlay = document.querySelector('.modal-overlay-estimativa');
+  if(!overlay) return;
+  estimativaParams = {
+    topografia: overlay.querySelector('#estParamTopografia').value,
+    tamanhoLote: Number(overlay.querySelector('#estParamTamanhoLote').value)||1,
+    padrao: overlay.querySelector('#estParamPadrao').value,
+    pavimentacao: overlay.querySelector('#estParamPavimentacao').value,
+    pctViario: Number(overlay.querySelector('#estParamPctViario').value)||0,
+    pctVerdeInstitucional: Number(overlay.querySelector('#estParamPctVerde').value)||0,
+    fatorAproveitamento: Number(overlay.querySelector('#estParamFator').value)||100,
+  };
+  estimativaGrid = gerarGridEstimativa(state.atual, estimativaParams);
+  renderEstimativaResumoUrbanistico();
+  renderEstimativaTabela();
+}
+function renderEstimativaResumoUrbanistico(){
+  const wrap = document.getElementById('estUrbanisticoResumo');
+  if(!wrap) return;
+  const urb = calcularMotorUrbanistico(state.atual, estimativaParams);
+  wrap.innerHTML = `
+    <div class="rel-item"><span class="l">Área viária</span><span class="v">${urb.areaViaria.toLocaleString('pt-BR',{maximumFractionDigits:0})} m²</span></div>
+    <div class="rel-item"><span class="l">Área verde + institucional</span><span class="v">${urb.areaVerdeInst.toLocaleString('pt-BR',{maximumFractionDigits:0})} m²</span></div>
+    <div class="rel-item"><span class="l">Área pública total</span><span class="v">${urb.areaPublicaTotal.toLocaleString('pt-BR',{maximumFractionDigits:0})} m²</span></div>
+    <div class="rel-item"><span class="l">ALV líquida (vendável)</span><span class="v pos">${urb.alvLiquida.toLocaleString('pt-BR',{maximumFractionDigits:0})} m²</span></div>
+    <div class="rel-item"><span class="l">Quantidade de lotes estimada</span><span class="v pos">${urb.qtdLotesEstimada}</span></div>`;
 }
 function renderEstimativaTabela(){
-  const p = state.atual;
-  const area = Number(p.terreno.area)||0;
   const wrap = document.getElementById('estimativaTabelaWrap');
   if(!wrap) return;
-  const total = estimativaGrid.reduce((s,l)=>s+(Number(l.taxa)||0)*area,0);
+  const total = estimativaGrid.reduce((s,l)=>s+l.valor,0);
 
   wrap.innerHTML = `<table class="cronograma" style="min-width:0;">
-    <thead><tr><th style="text-align:left;">Item</th><th>R$/m²</th><th>Valor estimado</th></tr></thead>
+    <thead><tr><th style="text-align:left;">Item</th><th style="text-align:left;">Rateado por</th><th>Valor estimado</th></tr></thead>
     <tbody>
-      ${estimativaGrid.map((l,i)=>`
+      ${estimativaGrid.map(l=>`
         <tr>
-          <td class="item-nome" style="position:static;">${escapeHtml(l.item)}</td>
-          <td class="cel"><input type="text" inputmode="decimal" class="money-in" data-estimativa-taxa="${i}" value="${l.taxa.toFixed(2)}" style="width:90px;"></td>
-          <td class="row-total pos">${fmtBRL((Number(l.taxa)||0)*area)}</td>
+          <td class="item-nome" style="position:static;">${escapeHtml(l.item)}${l.topografia?' <span class="badge warn" style="margin-left:4px;">topografia</span>':''}</td>
+          <td style="font-family:var(--mono);font-size:11px;color:var(--ink-soft);">${tipoLabel(l.tipo)}</td>
+          <td class="row-total pos">${fmtBRL(l.valor)}</td>
         </tr>`).join('')}
+      <tr class="total-row"><td class="item-nome" style="position:static;">Total</td><td></td><td class="row-total" data-estimativa-total-cel>${fmtBRL(total)}</td></tr>
     </tbody>
   </table>`;
-
-  wrap.querySelectorAll('[data-estimativa-taxa]').forEach(el=>{
-    el.addEventListener('input', ()=>{
-      const idx = Number(el.getAttribute('data-estimativa-taxa'));
-      estimativaGrid[idx].taxa = parseMoneyBR(el.value);
-      atualizarEstimativaTotal();
-      const linhaTotal = el.closest('tr').querySelector('.row-total');
-      if(linhaTotal) linhaTotal.textContent = fmtBRL(estimativaGrid[idx].taxa*area);
-    });
-    el.addEventListener('blur', ()=>{ el.value = parseMoneyBR(el.value).toFixed(2); });
-    el.addEventListener('focus', ()=>{ el.select(); });
-  });
-  atualizarEstimativaTotal();
-}
-function atualizarEstimativaTotal(){
-  const p = state.atual;
-  const area = Number(p.terreno.area)||0;
   const totalEl = document.querySelector('[data-estimativa-total]');
-  if(totalEl) totalEl.textContent = fmtBRL(estimativaGrid.reduce((s,l)=>s+(Number(l.taxa)||0)*area,0));
+  if(totalEl) totalEl.textContent = fmtBRL(total);
 }
 
 /* ================= MODAL: PREVISÃO DE VENDAS ================= */
