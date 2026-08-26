@@ -72,7 +72,7 @@
   button.btn-receita:hover{background:var(--good);color:#fff;}
   button.btn-despesa{border-color:var(--bad);color:var(--bad);background:var(--bad-bg);}
   button.btn-despesa:hover{background:var(--bad);color:#fff;}
-  button.btn-estimativa{border-color:var(--steel);color:var(--steel);background:var(--steel-light);}
+  button.btn-estimativa{border-color:var(--steel);color:var(--steel);background:var(--steel-light);font-weight:700;}
   button.btn-estimativa:hover{background:var(--steel);color:#fff;}
   button.small{padding:4px 9px;font-size:11px;}
   button:disabled{opacity:.4;cursor:not-allowed;}
@@ -232,6 +232,11 @@
     background:var(--bad-bg);color:var(--bad);border-radius:6px;padding:8px 10px;font-size:12.5px;margin-top:8px;
   }
   .rel-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:6px 20px;}
+  .comp-bloco{margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid var(--line-soft);}
+  .comp-titulo{font-weight:700;font-size:14px;margin-bottom:6px;}
+  table.comp-tabela{width:100%;border-collapse:collapse;font-size:12px;}
+  table.comp-tabela th{text-align:left;font-family:var(--mono);font-size:10px;text-transform:uppercase;color:var(--ink-soft);border-bottom:1px solid var(--line);padding:5px 6px;}
+  table.comp-tabela td{padding:5px 6px;border-bottom:1px solid var(--line-soft);vertical-align:top;}
   .rel-item{padding:6px 0;border-bottom:1px solid var(--line-soft);display:flex;justify-content:space-between;gap:10px;font-size:12.5px;}
   .rel-item .l{color:var(--ink-soft);}
   .rel-item .v{font-family:var(--mono);font-weight:700;text-align:right;}
@@ -456,18 +461,34 @@ const OPCOES_PADRAO_EMPREENDIMENTO = [
 ];
 /* tipo: 'area_total' | 'area_viaria' | 'area_verde_institucional' | 'por_lote' | 'fixo'
    topografia: true → a taxa é multiplicada pelo multiplicador de topografia escolhido
-   fonte: de onde vem a taxa de referência, mostrado na tela */
+   fonte: resumo em texto de onde vem a taxa, mostrado na tela
+   composicao: lista opcional de sub-itens (código, descrição, unidade, valor unitário, quantidade
+   por unidade de referência) que somados formam a taxa — alimenta a tela "Tabelas de composição" */
 const BANCO_CUSTOS_REFERENCIA = [
   { item:'Topografia', tipo:'area_total', taxa:1.00, fonte:'Estimativa de mercado — levantamento planialtimétrico' },
   { item:'Licença de supressão vegetal', tipo:'area_total', taxa:1.80, fonte:'Estimativa de mercado (taxas e licenciamento — sem composição SINAPI aplicável)' },
-  { item:'Supressão vegetal', tipo:'area_total', taxa:2.20, topografia:true, fonte:'Estimativa de mercado (sem composição SINAPI aplicável)' },
+  { item:'Supressão vegetal', tipo:'area_total', taxa:2.20, topografia:true,
+    fonte:'SINAPI-CE 85331 (corte de capoeira/roçagem, R$1,36/m²) + estimativa de mercado para destocamento e remoção de material vegetal',
+    composicao:[
+      { codigo:'85331', descricao:'Corte de capoeira fina (roçagem de capim), com BDI', unidade:'m²', valorUnit:1.36, quantidade:1 },
+      { codigo:'(estimativa)', descricao:'Destocamento e remoção de material vegetal — adicional de mercado', unidade:'m²', valorUnit:0.84, quantidade:1 },
+    ] },
   { item:'Despachantes', tipo:'area_total', taxa:3.50, fonte:'Estimativa de mercado (sem composição SINAPI aplicável)' },
   { item:'Marketing', tipo:'area_total', taxa:1.00, fonte:'Estimativa de mercado (sem composição SINAPI aplicável)' },
-  { item:'Terraplenagem', tipo:'area_total', taxa:10.00, topografia:true, fonte:'Composto SINAPI-CE: escavação (93336, R$4,11/m³) + carga/transporte (100978, R$3,92/m³), ~0,8 m³ de movimentação por m²' },
+  { item:'Terraplenagem', tipo:'area_total', taxa:10.04, topografia:true,
+    fonte:'SINAPI-CE: escavação 93336 (R$4,11/m³) + carga/transporte 100978 (R$3,92/m³), ~1,25 m³ de movimentação por m²',
+    composicao:[
+      { codigo:'93336', descricao:'Escavação em material de 1ª categoria, exclusive carga e transporte', unidade:'m³', valorUnit:4.11, quantidade:1.25 },
+      { codigo:'100978', descricao:'Carga, manobra e descarga de material de 1ª categoria', unidade:'m³', valorUnit:3.92, quantidade:1.25 },
+    ] },
   { item:'Muro', tipo:'area_total', taxa:4.50, fonte:'Estimativa de mercado (varia muito por tipo de muro — sem composição SINAPI única aplicável)' },
   { item:'Drenagem geral', tipo:'area_viaria', taxa:14.00, fonte:'Estimativa de mercado (depende do projeto de drenagem específico — sem composição SINAPI genérica por m²)' },
-  { item:'Pavimentação', tipo:'area_viaria', taxa:117.00, fonte:'SINAPI 92398 (execução piso intertravado, bloco 20x10cm e=8cm, média nacional R$106,83/m²) + base/compactação R$10,40/m²' }, // sobrescrito conforme o tipo escolhido
-  { item:'Meio-fio', tipo:'area_viaria', taxa:13.30, fonte:'SINAPI-CE — guia+sarjeta (R$59,98/m linear), convertido a R$/m² assumindo faixa viária de 9m com meio-fio dos dois lados' },
+  { item:'Pavimentação', tipo:'area_viaria', taxa:117.23, fonte:'SINAPI 92398 (execução piso intertravado, bloco 20x10cm e=8cm, média nacional R$106,83/m²) + base/compactação R$10,40/m²' }, // composicao definida em OPCOES_PAVIMENTACAO, conforme o tipo escolhido
+  { item:'Meio-fio', tipo:'area_viaria', taxa:13.30,
+    fonte:'SINAPI-CE — guia+sarjeta (R$59,98/m linear), convertido a R$/m² assumindo faixa viária de 9m com meio-fio dos dois lados',
+    composicao:[
+      { codigo:'(conversão)', descricao:'Guia (meio-fio) + sarjeta em concreto pré-moldado, ambos os lados da via, ÷ 9m de largura de faixa', unidade:'m linear → m²', valorUnit:59.98, quantidade:'2 lados ÷ 9m de faixa' },
+    ] },
   { item:'Rede de água', tipo:'por_lote', taxa:1800, fonte:'Estimativa de mercado (depende do traçado da rede — sem composição SINAPI por lote aplicável)' },
   { item:'Rede de esgoto', tipo:'por_lote', taxa:2400, fonte:'Estimativa de mercado (depende do traçado da rede — sem composição SINAPI por lote aplicável)' },
   { item:'Energia / iluminação pública', tipo:'por_lote', taxa:1500, fonte:'Estimativa de mercado (depende do projeto elétrico — sem composição SINAPI por lote aplicável)' },
@@ -475,9 +496,19 @@ const BANCO_CUSTOS_REFERENCIA = [
   { item:'Área institucional', tipo:'area_verde_institucional', taxa:18.00, fonte:'Estimativa de mercado (sem composição SINAPI aplicável)' },
 ];
 const OPCOES_PAVIMENTACAO = [
-  { id:'bloquete', nome:'Bloquete pré-moldado', taxa:117.00, fonte:'SINAPI 92398 (execução piso intertravado, bloco 20x10cm e=8cm, média nacional R$106,83/m²) + base/compactação R$10,40/m²' },
-  { id:'paralelepipedo', nome:'Paralelepípedo', taxa:220.00, fonte:'SINAPI 101169 (execução em paralelepípedos, rejuntamento em argamassa, média nacional desonerada R$221,83/m²)' },
-  { id:'cascalho', nome:'Cascalho / terra (sem pavimentação)', taxa:10.40, fonte:'SINAPI-CE — base/compactação com brita graduada, sem camada de rolamento (adaptação; não há composição de "cascalho" dedicada no SINAPI)' },
+  { id:'bloquete', nome:'Bloquete pré-moldado', taxa:117.23, fonte:'SINAPI 92398 (execução piso intertravado, bloco 20x10cm e=8cm, média nacional R$106,83/m²) + base/compactação R$10,40/m²',
+    composicao:[
+      { codigo:'92398', descricao:'Execução de pavimento em piso intertravado, bloco 20x10cm, e=8cm', unidade:'m²', valorUnit:106.83, quantidade:1 },
+      { codigo:'(base)', descricao:'Base/compactação com brita graduada (mesma base usada nos demais tipos)', unidade:'m²', valorUnit:10.40, quantidade:1 },
+    ] },
+  { id:'paralelepipedo', nome:'Paralelepípedo', taxa:220.00, fonte:'SINAPI 101169 (execução em paralelepípedos, rejuntamento em argamassa, média nacional desonerada R$221,83/m²)',
+    composicao:[
+      { codigo:'101169', descricao:'Execução de pavimento em paralelepípedos, rejuntamento com argamassa traço 1:3', unidade:'m²', valorUnit:220.00, quantidade:1 },
+    ] },
+  { id:'cascalho', nome:'Cascalho / terra (sem pavimentação)', taxa:10.40, fonte:'SINAPI-CE — base/compactação com brita graduada, sem camada de rolamento (adaptação; não há composição de "cascalho" dedicada no SINAPI)',
+    composicao:[
+      { codigo:'(adaptado)', descricao:'Base/compactação com brita graduada, sem camada de rolamento por cima', unidade:'m²', valorUnit:10.40, quantidade:1 },
+    ] },
 ];
 
 function projetoModelo(){
@@ -485,7 +516,7 @@ function projetoModelo(){
     id: 'p_modelo_'+Date.now(),
     nome: 'Modelo Sistema (planilha original)',
     criadoEm: new Date().toISOString(),
-    terreno:{ modo:'auto_total', considerarPermuta:true, considerarCompraFluxo:true, area:53531.29, valorCompra:6500000, sinal:500000, qtdParcelas:10, valorParcela:100000, permuta:4500000, outrosCustos:500000, dataCompra:'2024-12-01' },
+    terreno:{ modo:'auto_total', considerarPermuta:true, considerarCompraFluxo:true, area:53531.29, perimetro: Math.round(4*Math.sqrt(53531.29)), valorCompra:6500000, sinal:500000, qtdParcelas:10, valorParcela:100000, permuta:4500000, outrosCustos:500000, dataCompra:'2024-12-01' },
     lotes:{ totalLotes:243, lotesPermuta:75, lotesInvestidor:27 },
     comissao:{ valorLote:127450.38, pct:6, abaterReceita:true },
     vendas:{
@@ -507,7 +538,7 @@ function novoProjeto(nome){
     id: 'p_'+Date.now()+'_'+Math.random().toString(36).slice(2,7),
     nome: nome || 'Novo projeto',
     criadoEm: new Date().toISOString(),
-    terreno:{ modo:'auto_parcela', considerarPermuta:true, considerarCompraFluxo:true, area:0, valorCompra:0, sinal:0, qtdParcelas:0, valorParcela:0, permuta:0, outrosCustos:0, dataCompra: hojeStr() },
+    terreno:{ modo:'auto_parcela', considerarPermuta:true, considerarCompraFluxo:true, area:0, perimetro:0, valorCompra:0, sinal:0, qtdParcelas:0, valorParcela:0, permuta:0, outrosCustos:0, dataCompra: hojeStr() },
     lotes:{ totalLotes:0, lotesPermuta:0, lotesInvestidor:0 },
     comissao:{ valorLote:0, pct:0, abaterReceita:true },
     vendas:{
@@ -537,6 +568,9 @@ function normalizarProjeto(p){
   if(p.vendas && p.vendas.investidores && p.vendas.investidores.considerarNoFluxo===undefined){
     p.vendas.investidores.considerarNoFluxo = false;
     p.vendas.investidores.dataRecebimento = p.vendas.investidores.dataRecebimento || p.vendas.inicioVendas || hojeStr();
+  }
+  if(p.terreno && (p.terreno.perimetro===undefined || p.terreno.perimetro===null)){
+    p.terreno.perimetro = p.terreno.area>0 ? Math.round(4*Math.sqrt(p.terreno.area)) : 0;
   }
   if(p.vendas && p.vendas.investidores && p.vendas.investidores.considerarNoResultado===undefined) p.vendas.investidores.considerarNoResultado = false;
   if(p.vendas && !p.vendas.previsao) p.vendas.previsao = [];
@@ -1748,9 +1782,11 @@ function renderEditor(p){
   return `<div class="wrap">
     <div class="toolbar">
       <button class="back" data-back="1">← Todos os projetos</button>
-      <div style="display:flex;gap:8px;">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
         <button data-recolher-tudo="1" class="ghost">Recolher tudo</button>
         <button data-expandir-tudo="1" class="ghost">Expandir tudo</button>
+        <button data-abrir-estimativa="1" class="btn-estimativa">⚡ Auto</button>
+        <button data-abrir-composicoes="1" class="ghost">Tabelas de composição</button>
         <button data-relatorio="${p.id}" class="ghost">Relatório</button>
         <button data-export="${p.id}" class="ghost">Exportar</button>
         <button data-dup="1" class="ghost">Duplicar</button>
@@ -1766,8 +1802,10 @@ function renderEditor(p){
           <h2 class="panel-h" data-panel-id="terreno">Terreno e condições de compra <i class="chevron">▾</i></h2>
           <div class="field-row">
             <div class="field"><label>Área do terreno (m²)</label><input type="number" data-f="terreno.area" value="${p.terreno.area}"></div>
+            <div class="field"><label>Perímetro (m)</label><input type="number" data-f="terreno.perimetro" value="${p.terreno.perimetro}"></div>
             <div class="field"><label>Data da compra</label><input type="date" data-f="terreno.dataCompra" value="${p.terreno.dataCompra}"></div>
           </div>
+          <div class="footnote" style="margin:2px 0 8px;">O perímetro é calculado automaticamente quando você preenche a área (considerando um terreno aproximadamente quadrado), mas pode ser editado livremente se você souber o valor real.</div>
 
           <div class="field-row" style="margin-top:10px;">
             <div class="field">
@@ -1912,7 +1950,6 @@ function renderEditor(p){
 
         <section class="panel ${paineisColapsados['custos']?'collapsed':''}" id="painel-custos">
           <h2 class="panel-h" data-panel-id="custos">Custos de obra e infraestrutura <i class="chevron">▾</i></h2>
-          <button class="btn-estimativa" data-abrir-estimativa="1">⚡ Auto — gerar orçamento urbanístico estimado</button>
           <table class="costs" style="margin-top:12px;">
             <tr><th>Item</th><th style="text-align:right">Valor (R$)</th><th></th></tr>
             ${custosRows}
@@ -2009,6 +2046,10 @@ function gerarGridEstimativa(p, params, gridAnterior){
 
 function abrirModalEstimativa(){
   const p = state.atual;
+  if(!p.terreno.area || p.terreno.area<=0){
+    abrirModalTerrenoRequisito();
+    return;
+  }
   estimativaParams = {
     topografia: 'plano',
     tamanhoLote: 200,
@@ -2021,9 +2062,120 @@ function abrirModalEstimativa(){
   estimativaGrid = gerarGridEstimativa(p, estimativaParams);
   renderModalEstimativa();
 }
+function abrirModalTerrenoRequisito(){
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay modal-overlay-terreno-requisito';
+  overlay.innerHTML = `
+    <div class="modal-box" style="max-width:380px;">
+      <h2 style="font-size:16px;margin:0 0 6px;">Antes de gerar o orçamento</h2>
+      <p class="footnote" style="margin:0 0 14px;">O Auto precisa saber a área do terreno pra calcular a divisão da gleba e ratear os custos. Informe abaixo pra continuar — isso vai preencher o campo de área lá no painel de Terreno também.</p>
+      <div class="field" style="margin-bottom:12px;">
+        <label>Área do terreno (m²)</label>
+        <input type="number" id="reqArea" value="${state.atual.terreno.area||''}" placeholder="Ex.: 50000">
+      </div>
+      <div class="field" style="margin-bottom:14px;">
+        <label>Perímetro (m)</label>
+        <input type="number" id="reqPerimetro" value="${state.atual.terreno.perimetro||''}" placeholder="Calculado automático">
+      </div>
+      <div class="footnote" id="reqAviso" style="margin-bottom:10px;color:var(--bad);display:none;"></div>
+      <div style="display:flex;justify-content:flex-end;gap:8px;">
+        <button class="ghost" id="reqCancelar">Cancelar</button>
+        <button class="primary" id="reqContinuar">Continuar →</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+
+  const areaInput = overlay.querySelector('#reqArea');
+  const perimetroInput = overlay.querySelector('#reqPerimetro');
+  areaInput.addEventListener('input', ()=>{
+    const a = Number(areaInput.value)||0;
+    if(a>0) perimetroInput.value = Math.round(4*Math.sqrt(a));
+  });
+  overlay.querySelector('#reqCancelar').addEventListener('click', ()=>overlay.remove());
+  overlay.querySelector('#reqContinuar').addEventListener('click', ()=>{
+    const a = Number(areaInput.value)||0;
+    if(a<=0){
+      const aviso = overlay.querySelector('#reqAviso');
+      aviso.textContent = 'Informe uma área maior que zero pra continuar.';
+      aviso.style.display = 'block';
+      return;
+    }
+    state.atual.terreno.area = a;
+    state.atual.terreno.perimetro = Number(perimetroInput.value)||Math.round(4*Math.sqrt(a));
+    salvarProjeto(state.atual);
+    overlay.remove();
+    renderFull();
+    abrirModalEstimativa();
+  });
+}
 function fecharModalEstimativa(){
   const overlay = document.querySelector('.modal-overlay-estimativa');
   if(overlay) overlay.remove();
+}
+function fecharModalComposicoes(){
+  const overlay = document.querySelector('.modal-overlay-composicoes');
+  if(overlay) overlay.remove();
+}
+function linhaComposicaoHtml(item, tipo, composicao, taxaFinal, unidadeFinal, fonte){
+  if(!composicao || !composicao.length){
+    return `
+      <div class="comp-bloco">
+        <div class="comp-titulo">${escapeHtml(item)}${tipo?` <span class="footnote" style="display:inline;">(${tipoLabel(tipo)})</span>`:''}</div>
+        <div class="footnote" style="padding:6px 0;">Sem composição detalhada — ${escapeHtml(fonte)}</div>
+      </div>`;
+  }
+  const linhas = composicao.map(c=>`
+    <tr>
+      <td style="font-family:var(--mono);font-size:11px;">${escapeHtml(c.codigo)}</td>
+      <td>${escapeHtml(c.descricao)}</td>
+      <td style="text-align:center;">${escapeHtml(c.unidade)}</td>
+      <td style="text-align:right;font-family:var(--mono);">${typeof c.valorUnit==='number'?fmtBRL(c.valorUnit):c.valorUnit}</td>
+      <td style="text-align:right;font-family:var(--mono);">${typeof c.quantidade==='number'?c.quantidade:c.quantidade}</td>
+    </tr>`).join('');
+  return `
+    <div class="comp-bloco">
+      <div class="comp-titulo">${escapeHtml(item)}${tipo?` <span class="footnote" style="display:inline;">(${tipoLabel(tipo)})</span>`:''} — <span class="pos">${fmtBRL(taxaFinal)}${unidadeFinal?'/'+unidadeFinal:''}</span></div>
+      <table class="comp-tabela">
+        <thead><tr><th>Código</th><th style="text-align:left;">Descrição</th><th>Unid.</th><th>Valor unit.</th><th>Qtd. de referência</th></tr></thead>
+        <tbody>${linhas}</tbody>
+      </table>
+    </div>`;
+}
+function abrirModalComposicoes(){
+  fecharModalComposicoes();
+  const blocosCustos = BANCO_CUSTOS_REFERENCIA.filter(r=>r.item!=='Pavimentação').map(r=>{
+    const unidadeFinal = { area_total:'m²', area_viaria:'m²', area_verde_institucional:'m²', por_lote:'lote' }[r.tipo] || '';
+    return linhaComposicaoHtml(r.item, r.tipo, r.composicao, r.taxa, unidadeFinal, r.fonte);
+  }).join('');
+  const blocosPavimentacao = OPCOES_PAVIMENTACAO.map(o=>
+    linhaComposicaoHtml('Pavimentação', null, o.composicao, o.taxa, 'm² — '+o.nome, o.fonte)
+  ).join('');
+  const blocosFixos = `
+    ${linhaComposicaoHtml('Portaria', 'fixo', [{codigo:'(CUB-CE)', descricao:`CUB/m² Ceará (Sinduscon-CE, categoria R8N) × área estimada da edificação`, unidade:'m²', valorUnit:CUB_CE, quantidade:'30 a 100 m² conforme o padrão'}], CUB_CE, 'm² de edificação', 'CUB/m² Ceará')}
+    ${linhaComposicaoHtml('Clube', 'fixo', [{codigo:'(CUB-CE)', descricao:`CUB/m² Ceará (Sinduscon-CE, categoria R8N) × área estimada da edificação`, unidade:'m²', valorUnit:CUB_CE, quantidade:'150 a 300 m² conforme o padrão (não existe no econômico)'}], CUB_CE, 'm² de edificação', 'CUB/m² Ceará')}`;
+
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay modal-overlay-composicoes';
+  overlay.innerHTML = `
+    <div class="modal-box wide" style="max-width:820px;">
+      <div class="modal-header">
+        <div>
+          <h2>Tabelas de composição</h2>
+          <div class="footnote" style="margin:2px 0 0;">Como cada taxa de referência do "Auto" foi montada, item por item, com o código e a fonte de cada componente. Itens sem composição detalhada são estimativa de mercado — sem uma fonte oficial rastreável.</div>
+        </div>
+        <button class="modal-close" data-fechar-composicoes="1">✕</button>
+      </div>
+      <div style="max-height:65vh;overflow-y:auto;margin-top:6px;">
+        ${blocosCustos}
+        ${blocosPavimentacao}
+        ${blocosFixos}
+      </div>
+      <div style="display:flex;justify-content:flex-end;margin-top:14px;">
+        <button class="ghost" data-fechar-composicoes="1">Fechar</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  overlay.querySelectorAll('[data-fechar-composicoes]').forEach(el=>el.addEventListener('click', fecharModalComposicoes));
 }
 function tipoLabel(tipo){
   return { area_total:'Área total', area_viaria:'Área viária', area_verde_institucional:'Área verde/institucional', por_lote:'Por lote', fixo:'Área da edificação (m²)' }[tipo] || tipo;
@@ -3207,6 +3359,9 @@ function bindEvents(){
   const abrirEstimativa = app.querySelector('[data-abrir-estimativa]');
   if(abrirEstimativa) abrirEstimativa.addEventListener('click', abrirModalEstimativa);
 
+  const abrirComposicoes = app.querySelector('[data-abrir-composicoes]');
+  if(abrirComposicoes) abrirComposicoes.addEventListener('click', abrirModalComposicoes);
+
   const titleInput = app.querySelector('#titleInput');
   if(titleInput) titleInput.addEventListener('change', async ()=>{
     state.atual.nome = titleInput.value || 'Sem título';
@@ -3233,6 +3388,12 @@ function bindEvents(){
           const outroEl = app2.querySelector(`[data-f="${outroCampo}"]`);
           if(outroEl) outroEl.value = fmtMoneyInput(state.atual.terreno[outroCampo.split('.')[1]]);
         }
+      }
+
+      if(path[0]==='terreno' && key==='area'){
+        state.atual.terreno.perimetro = state.atual.terreno.area>0 ? Math.round(4*Math.sqrt(state.atual.terreno.area)) : 0;
+        const perimetroEl = document.querySelector('[data-f="terreno.perimetro"]');
+        if(perimetroEl) perimetroEl.value = state.atual.terreno.perimetro;
       }
 
       await salvarProjeto(state.atual);
