@@ -232,11 +232,21 @@
     background:var(--bad-bg);color:var(--bad);border-radius:6px;padding:8px 10px;font-size:12.5px;margin-top:8px;
   }
   .rel-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:6px 20px;}
-  .comp-bloco{margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid var(--line-soft);}
-  .comp-titulo{font-weight:700;font-size:14px;margin-bottom:6px;}
-  table.comp-tabela{width:100%;border-collapse:collapse;font-size:12px;}
-  table.comp-tabela th{text-align:left;font-family:var(--mono);font-size:10px;text-transform:uppercase;color:var(--ink-soft);border-bottom:1px solid var(--line);padding:5px 6px;}
-  table.comp-tabela td{padding:5px 6px;border-bottom:1px solid var(--line-soft);vertical-align:top;}
+  .comp-lista{display:flex;flex-direction:column;gap:2px;}
+  .comp-lista-item{
+    display:flex;justify-content:space-between;align-items:center;width:100%;
+    background:var(--paper);border:1px solid var(--line-soft);border-radius:6px;
+    padding:10px 12px;font-size:13px;font-weight:400;text-align:left;cursor:pointer;
+  }
+  .comp-lista-item:hover{background:var(--paper-2);border-color:var(--steel);}
+  .comp-lista-nome{color:var(--ink);}
+  .comp-lista-valor{font-family:var(--mono);font-weight:700;white-space:nowrap;}
+  table.comp-tabela-edit{width:100%;border-collapse:collapse;font-size:12px;margin-top:8px;}
+  table.comp-tabela-edit th{text-align:left;font-family:var(--mono);font-size:10px;text-transform:uppercase;color:var(--ink-soft);border-bottom:1px solid var(--line);padding:4px 5px;}
+  table.comp-tabela-edit td{padding:3px 5px;vertical-align:middle;}
+  table.comp-tabela-edit input{width:100%;font-size:12px;padding:5px 6px;border:1px solid var(--line);border-radius:4px;background:#fff;}
+  .comp-del-linha{background:none;border:none;color:var(--ink-soft);font-size:12px;cursor:pointer;padding:2px 4px;}
+  .comp-del-linha:hover{color:var(--bad);}
   .rel-item{padding:6px 0;border-bottom:1px solid var(--line-soft);display:flex;justify-content:space-between;gap:10px;font-size:12.5px;}
   .rel-item .l{color:var(--ink-soft);}
   .rel-item .v{font-family:var(--mono);font-weight:700;text-align:right;}
@@ -443,7 +453,7 @@ const ITENS_PADRAO = [
    (licenças, despachantes, marketing), a taxa é uma estimativa de mercado, sinalizada como tal.
    O sistema roda todo offline: nenhum valor é buscado ao vivo — são referências fixas no
    código, que você pode e deve recalibrar com orçamentos e tabelas atualizadas. */
-const CUB_CE = 2400.81; // Sinduscon-CE, categoria R8N, referência jun/2026
+let CUB_CE = 2400.81; // Sinduscon-CE, categoria R8N, referência jun/2026 — pode ser editado e fica salvo no Supabase
 const URBANISTICO_PADRAO = {
   pctViario: 20,
   pctVerdeInstitucional: 12,
@@ -464,7 +474,7 @@ const OPCOES_PADRAO_EMPREENDIMENTO = [
    fonte: resumo em texto de onde vem a taxa, mostrado na tela
    composicao: lista opcional de sub-itens (código, descrição, unidade, valor unitário, quantidade
    por unidade de referência) que somados formam a taxa — alimenta a tela "Tabelas de composição" */
-const BANCO_CUSTOS_REFERENCIA = [
+let BANCO_CUSTOS_REFERENCIA = [
   { item:'Topografia', tipo:'area_total', taxa:1.00, fonte:'Estimativa de mercado — levantamento planialtimétrico' },
   { item:'Licença de supressão vegetal', tipo:'area_total', taxa:1.80, fonte:'Estimativa de mercado (taxas e licenciamento — sem composição SINAPI aplicável)' },
   { item:'Supressão vegetal', tipo:'area_total', taxa:2.20, topografia:true,
@@ -495,7 +505,7 @@ const BANCO_CUSTOS_REFERENCIA = [
   { item:'Paisagismo', tipo:'area_verde_institucional', taxa:12.00, fonte:'Estimativa de mercado (sem composição SINAPI aplicável)' },
   { item:'Área institucional', tipo:'area_verde_institucional', taxa:18.00, fonte:'Estimativa de mercado (sem composição SINAPI aplicável)' },
 ];
-const OPCOES_PAVIMENTACAO = [
+let OPCOES_PAVIMENTACAO = [
   { id:'bloquete', nome:'Bloquete pré-moldado', taxa:117.23, fonte:'SINAPI 92398 (execução piso intertravado, bloco 20x10cm e=8cm, média nacional R$106,83/m²) + base/compactação R$10,40/m²',
     composicao:[
       { codigo:'92398', descricao:'Execução de pavimento em piso intertravado, bloco 20x10cm, e=8cm', unidade:'m²', valorUnit:106.83, quantidade:1 },
@@ -510,6 +520,33 @@ const OPCOES_PAVIMENTACAO = [
       { codigo:'(adaptado)', descricao:'Base/compactação com brita graduada, sem camada de rolamento por cima', unidade:'m²', valorUnit:10.40, quantidade:1 },
     ] },
 ];
+
+/* Cópia dos valores de fábrica, usada só para semear o Supabase na primeira vez que o
+   sistema roda (ninguém editou nada ainda) e para o botão "Restaurar valor de fábrica". */
+const COMPOSICOES_REFERENCIA_FABRICA = {
+  custos: JSON.parse(JSON.stringify(BANCO_CUSTOS_REFERENCIA)),
+  pavimentacao: JSON.parse(JSON.stringify(OPCOES_PAVIMENTACAO)),
+  cubCe: CUB_CE,
+};
+const COMPOSICOES_REFERENCIA_KEY = 'config:composicoes-referencia';
+
+async function carregarComposicoesReferencia(){
+  try{
+    const r = await window.storage.get(COMPOSICOES_REFERENCIA_KEY);
+    if(r && r.value){
+      const dados = JSON.parse(r.value);
+      if(dados.custos) BANCO_CUSTOS_REFERENCIA = dados.custos;
+      if(dados.pavimentacao) OPCOES_PAVIMENTACAO = dados.pavimentacao;
+      if(typeof dados.cubCe==='number') CUB_CE = dados.cubCe;
+      return;
+    }
+  }catch(e){ /* primeira vez rodando, ou chave ainda não existe — segue pra semear abaixo */ }
+  await salvarComposicoesReferencia();
+}
+async function salvarComposicoesReferencia(){
+  const dados = { custos: BANCO_CUSTOS_REFERENCIA, pavimentacao: OPCOES_PAVIMENTACAO, cubCe: CUB_CE };
+  await window.storage.set(COMPOSICOES_REFERENCIA_KEY, JSON.stringify(dados));
+}
 
 function projetoModelo(){
   return {
@@ -1407,6 +1444,7 @@ let state = { view:'lista', projetos:[], atual:null, loading:true };
 let projetosComparar = new Set();
 
 async function init(){
+  await carregarComposicoesReferencia();
   const ids = await carregarLista();
   const projs = [];
   for(const id of ids){ const p = await carregarProjeto(id); if(p) projs.push(p); }
@@ -2116,59 +2154,53 @@ function fecharModalComposicoes(){
   const overlay = document.querySelector('.modal-overlay-composicoes');
   if(overlay) overlay.remove();
 }
-function linhaComposicaoHtml(item, tipo, composicao, taxaFinal, unidadeFinal, fonte){
-  if(!composicao || !composicao.length){
-    return `
-      <div class="comp-bloco">
-        <div class="comp-titulo">${escapeHtml(item)}${tipo?` <span class="footnote" style="display:inline;">(${tipoLabel(tipo)})</span>`:''}</div>
-        <div class="footnote" style="padding:6px 0;">Sem composição detalhada — ${escapeHtml(fonte)}</div>
-      </div>`;
-  }
-  const linhas = composicao.map(c=>`
-    <tr>
-      <td style="font-family:var(--mono);font-size:11px;">${escapeHtml(c.codigo)}</td>
-      <td>${escapeHtml(c.descricao)}</td>
-      <td style="text-align:center;">${escapeHtml(c.unidade)}</td>
-      <td style="text-align:right;font-family:var(--mono);">${typeof c.valorUnit==='number'?fmtBRL(c.valorUnit):c.valorUnit}</td>
-      <td style="text-align:right;font-family:var(--mono);">${typeof c.quantidade==='number'?c.quantidade:c.quantidade}</td>
-    </tr>`).join('');
-  return `
-    <div class="comp-bloco">
-      <div class="comp-titulo">${escapeHtml(item)}${tipo?` <span class="footnote" style="display:inline;">(${tipoLabel(tipo)})</span>`:''} — <span class="pos">${fmtBRL(taxaFinal)}${unidadeFinal?'/'+unidadeFinal:''}</span></div>
-      <table class="comp-tabela">
-        <thead><tr><th>Código</th><th style="text-align:left;">Descrição</th><th>Unid.</th><th>Valor unit.</th><th>Qtd. de referência</th></tr></thead>
-        <tbody>${linhas}</tbody>
-      </table>
-    </div>`;
+function fecharModalComposicaoDetalhe(){
+  const overlay = document.querySelector('.modal-overlay-composicao-detalhe');
+  if(overlay) overlay.remove();
+}
+function listaReferenciaComposicoes(){
+  const linhas = [];
+  BANCO_CUSTOS_REFERENCIA.forEach((r,i)=>{
+    if(r.item==='Pavimentação') return;
+    linhas.push({
+      chave:`custo:${i}`, titulo:r.item, taxa:r.taxa,
+      tag: (r.composicao && r.composicao.length) ? 'SINAPI' : 'Mercado'
+    });
+  });
+  OPCOES_PAVIMENTACAO.forEach((o,i)=>{
+    linhas.push({ chave:`pavimento:${i}`, titulo:`Pavimentação — ${o.nome}`, taxa:o.taxa, tag:'SINAPI' });
+  });
+  linhas.push({ chave:'cub', titulo:'CUB/m² Ceará (usado em Portaria e Clube)', taxa:CUB_CE, tag:'CUB-CE' });
+  return linhas;
+}
+function resolverReferenciaPorChave(chave){
+  if(chave==='cub') return { tipo:'cub' };
+  const [tipo, idxStr] = chave.split(':');
+  const idx = Number(idxStr);
+  if(tipo==='custo') return { tipo:'custo', idx, obj: BANCO_CUSTOS_REFERENCIA[idx] };
+  if(tipo==='pavimento') return { tipo:'pavimento', idx, obj: OPCOES_PAVIMENTACAO[idx] };
+  return null;
 }
 function abrirModalComposicoes(){
   fecharModalComposicoes();
-  const blocosCustos = BANCO_CUSTOS_REFERENCIA.filter(r=>r.item!=='Pavimentação').map(r=>{
-    const unidadeFinal = { area_total:'m²', area_viaria:'m²', area_verde_institucional:'m²', por_lote:'lote' }[r.tipo] || '';
-    return linhaComposicaoHtml(r.item, r.tipo, r.composicao, r.taxa, unidadeFinal, r.fonte);
-  }).join('');
-  const blocosPavimentacao = OPCOES_PAVIMENTACAO.map(o=>
-    linhaComposicaoHtml('Pavimentação', null, o.composicao, o.taxa, 'm² — '+o.nome, o.fonte)
-  ).join('');
-  const blocosFixos = `
-    ${linhaComposicaoHtml('Portaria', 'fixo', [{codigo:'(CUB-CE)', descricao:`CUB/m² Ceará (Sinduscon-CE, categoria R8N) × área estimada da edificação`, unidade:'m²', valorUnit:CUB_CE, quantidade:'30 a 100 m² conforme o padrão'}], CUB_CE, 'm² de edificação', 'CUB/m² Ceará')}
-    ${linhaComposicaoHtml('Clube', 'fixo', [{codigo:'(CUB-CE)', descricao:`CUB/m² Ceará (Sinduscon-CE, categoria R8N) × área estimada da edificação`, unidade:'m²', valorUnit:CUB_CE, quantidade:'150 a 300 m² conforme o padrão (não existe no econômico)'}], CUB_CE, 'm² de edificação', 'CUB/m² Ceará')}`;
-
+  const linhas = listaReferenciaComposicoes();
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay modal-overlay-composicoes';
   overlay.innerHTML = `
-    <div class="modal-box wide" style="max-width:820px;">
+    <div class="modal-box wide" style="max-width:640px;">
       <div class="modal-header">
         <div>
           <h2>Tabelas de composição</h2>
-          <div class="footnote" style="margin:2px 0 0;">Como cada taxa de referência do "Auto" foi montada, item por item, com o código e a fonte de cada componente. Itens sem composição detalhada são estimativa de mercado — sem uma fonte oficial rastreável.</div>
+          <div class="footnote" style="margin:2px 0 0;">Toque numa linha do orçamento pra ver e editar a composição SINAPI (ou o valor de mercado) usada nela. As alterações ficam salvas no banco e valem pra todos que usarem o sistema.</div>
         </div>
         <button class="modal-close" data-fechar-composicoes="1">✕</button>
       </div>
-      <div style="max-height:65vh;overflow-y:auto;margin-top:6px;">
-        ${blocosCustos}
-        ${blocosPavimentacao}
-        ${blocosFixos}
+      <div class="comp-lista" style="max-height:60vh;overflow-y:auto;margin-top:6px;">
+        ${linhas.map(l=>`
+          <button type="button" class="comp-lista-item" data-comp-abrir="${l.chave}">
+            <span class="comp-lista-nome">${escapeHtml(l.titulo)}</span>
+            <span class="comp-lista-valor">${fmtBRL(l.taxa)} <span class="badge ${l.tag==='Mercado'?'warn':'good'}" style="margin-left:6px;">${l.tag}</span></span>
+          </button>`).join('')}
       </div>
       <div style="display:flex;justify-content:flex-end;margin-top:14px;">
         <button class="ghost" data-fechar-composicoes="1">Fechar</button>
@@ -2176,6 +2208,155 @@ function abrirModalComposicoes(){
     </div>`;
   document.body.appendChild(overlay);
   overlay.querySelectorAll('[data-fechar-composicoes]').forEach(el=>el.addEventListener('click', fecharModalComposicoes));
+  overlay.querySelectorAll('[data-comp-abrir]').forEach(el=>el.addEventListener('click', ()=>abrirModalComposicaoDetalhe(el.getAttribute('data-comp-abrir'))));
+}
+
+let composicaoDetalheEdicao = null;
+
+function abrirModalComposicaoDetalhe(chave){
+  fecharModalComposicaoDetalhe();
+  const ref = resolverReferenciaPorChave(chave);
+  let titulo, fonte, taxaAtual, composicaoAtual;
+  if(ref.tipo==='cub'){
+    titulo = 'CUB/m² Ceará (usado em Portaria e Clube)';
+    fonte = 'Sinduscon-CE, categoria R8N — publicado mensalmente; atualize aqui manualmente quando o Sinduscon divulgar um novo valor.';
+    taxaAtual = CUB_CE;
+    composicaoAtual = [];
+  } else {
+    titulo = ref.tipo==='pavimento' ? `Pavimentação — ${ref.obj.nome}` : ref.obj.item;
+    fonte = ref.obj.fonte;
+    taxaAtual = ref.obj.taxa;
+    composicaoAtual = ref.obj.composicao ? JSON.parse(JSON.stringify(ref.obj.composicao)) : [];
+  }
+
+  composicaoDetalheEdicao = { chave, composicao: composicaoAtual };
+
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay modal-overlay-composicao-detalhe';
+  overlay.style.zIndex = '160';
+  overlay.innerHTML = `
+    <div class="modal-box wide" style="max-width:720px;">
+      <div class="modal-header">
+        <div>
+          <h2>${escapeHtml(titulo)}</h2>
+          <div class="footnote" style="margin:2px 0 0;">${escapeHtml(fonte)}</div>
+        </div>
+        <button class="modal-close" data-fechar-detalhe="1">✕</button>
+      </div>
+      <div id="compDetalheTabelaWrap"></div>
+      <button type="button" class="ghost small" data-comp-add-linha="1" style="margin-top:8px;">+ Adicionar componente</button>
+
+      <div class="field" style="margin-top:16px;max-width:220px;">
+        <label>Taxa final aplicada no orçamento</label>
+        <input type="text" inputmode="decimal" class="money-in" id="compTaxaFinal" value="${taxaAtual.toFixed(2)}">
+      </div>
+      <div class="footnote" id="compSomaAuto" style="margin-top:4px;"></div>
+
+      <div style="display:flex;justify-content:space-between;margin-top:16px;">
+        <button class="ghost" data-comp-restaurar="1">Restaurar valor de fábrica</button>
+        <div style="display:flex;gap:8px;">
+          <button class="ghost" data-fechar-detalhe="1">Cancelar</button>
+          <button class="primary" data-comp-salvar="1">Salvar</button>
+        </div>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  renderComposicaoDetalheTabela();
+
+  overlay.querySelectorAll('[data-fechar-detalhe]').forEach(el=>el.addEventListener('click', fecharModalComposicaoDetalhe));
+  overlay.querySelector('[data-comp-add-linha]').addEventListener('click', ()=>{
+    composicaoDetalheEdicao.composicao.push({codigo:'', descricao:'', unidade:'', valorUnit:0, quantidade:1});
+    renderComposicaoDetalheTabela();
+  });
+  overlay.querySelector('[data-comp-restaurar]').addEventListener('click', ()=>restaurarComposicaoFabrica(chave));
+  overlay.querySelector('[data-comp-salvar]').addEventListener('click', ()=>salvarComposicaoDetalhe(chave));
+}
+function renderComposicaoDetalheTabela(){
+  const wrap = document.getElementById('compDetalheTabelaWrap');
+  if(!wrap) return;
+  const comp = composicaoDetalheEdicao.composicao;
+  if(!comp.length){
+    wrap.innerHTML = `<div class="footnote" style="padding:8px 0;">Sem componentes cadastrados — esse item é uma estimativa de mercado direta, sem uma composição SINAPI detalhada por trás. Clique em "+ Adicionar componente" se quiser detalhar de onde vem o valor.</div>`;
+  } else {
+    wrap.innerHTML = `<table class="comp-tabela-edit">
+      <thead><tr><th>Código</th><th style="text-align:left;">Descrição</th><th>Unid.</th><th>Valor unit.</th><th>Qtd.</th><th></th></tr></thead>
+      <tbody>
+        ${comp.map((c,i)=>`
+          <tr>
+            <td><input type="text" data-comp-campo="codigo" data-comp-idx="${i}" value="${escapeHtml(String(c.codigo))}" style="width:80px;"></td>
+            <td><input type="text" data-comp-campo="descricao" data-comp-idx="${i}" value="${escapeHtml(String(c.descricao))}" style="width:100%;"></td>
+            <td><input type="text" data-comp-campo="unidade" data-comp-idx="${i}" value="${escapeHtml(String(c.unidade))}" style="width:60px;"></td>
+            <td><input type="text" inputmode="decimal" class="money-in" data-comp-campo="valorUnit" data-comp-idx="${i}" value="${typeof c.valorUnit==='number'?c.valorUnit.toFixed(2):escapeHtml(String(c.valorUnit))}" style="width:80px;"></td>
+            <td><input type="text" data-comp-campo="quantidade" data-comp-idx="${i}" value="${escapeHtml(String(c.quantidade))}" style="width:70px;"></td>
+            <td><button type="button" class="comp-del-linha" data-comp-del="${i}" title="Remover">✕</button></td>
+          </tr>`).join('')}
+      </tbody>
+    </table>`;
+    wrap.querySelectorAll('[data-comp-campo]').forEach(el=>{
+      el.addEventListener('input', ()=>{
+        const idx = Number(el.getAttribute('data-comp-idx'));
+        const campo = el.getAttribute('data-comp-campo');
+        let v = el.value;
+        if(campo==='valorUnit') v = parseMoneyBR(v);
+        else if(campo==='quantidade'){ const n = parseFloat(v.replace(',','.')); if(!isNaN(n) && isFinite(n) && String(n)===v.replace(',','.').trim()) v = n; }
+        composicaoDetalheEdicao.composicao[idx][campo] = v;
+        atualizarSomaAutoComposicao();
+      });
+    });
+    wrap.querySelectorAll('[data-comp-del]').forEach(el=>{
+      el.addEventListener('click', ()=>{
+        const idx = Number(el.getAttribute('data-comp-del'));
+        composicaoDetalheEdicao.composicao.splice(idx,1);
+        renderComposicaoDetalheTabela();
+      });
+    });
+  }
+  atualizarSomaAutoComposicao();
+}
+function atualizarSomaAutoComposicao(){
+  const el = document.getElementById('compSomaAuto');
+  if(!el) return;
+  const comp = composicaoDetalheEdicao.composicao;
+  if(!comp.length){ el.innerHTML = ''; return; }
+  const todosNumericos = comp.every(c=>typeof c.valorUnit==='number' && typeof c.quantidade==='number');
+  if(todosNumericos){
+    const soma = comp.reduce((s,c)=>s+c.valorUnit*c.quantidade,0);
+    el.innerHTML = `Soma dos componentes: <strong>${fmtBRL(soma)}</strong> — <button type="button" class="ghost small" id="compUsarSoma" style="margin-left:6px;">Usar como taxa final</button>`;
+    const link = document.getElementById('compUsarSoma');
+    if(link) link.addEventListener('click', ()=>{ document.getElementById('compTaxaFinal').value = soma.toFixed(2); });
+  } else {
+    el.textContent = 'Um ou mais componentes têm quantidade não numérica (ex.: uma conversão explicada em texto) — ajuste a taxa final manualmente acima.';
+  }
+}
+async function salvarComposicaoDetalhe(chave){
+  const novaTaxa = parseMoneyBR(document.getElementById('compTaxaFinal').value);
+  const ref = resolverReferenciaPorChave(chave);
+  const composicaoFinal = composicaoDetalheEdicao.composicao.length ? composicaoDetalheEdicao.composicao : undefined;
+  if(ref.tipo==='cub'){
+    CUB_CE = novaTaxa;
+  } else if(ref.tipo==='custo'){
+    BANCO_CUSTOS_REFERENCIA[ref.idx].taxa = novaTaxa;
+    BANCO_CUSTOS_REFERENCIA[ref.idx].composicao = composicaoFinal;
+  } else if(ref.tipo==='pavimento'){
+    OPCOES_PAVIMENTACAO[ref.idx].taxa = novaTaxa;
+    OPCOES_PAVIMENTACAO[ref.idx].composicao = composicaoFinal;
+  }
+  await salvarComposicoesReferencia();
+  fecharModalComposicaoDetalhe();
+  abrirModalComposicoes();
+  mostrarAviso('Valor de referência atualizado — vale a partir de agora pra todos que usarem o sistema.', 'sucesso');
+}
+function restaurarComposicaoFabrica(chave){
+  const ref = resolverReferenciaPorChave(chave);
+  let fabrica;
+  if(ref.tipo==='cub') fabrica = { taxa: COMPOSICOES_REFERENCIA_FABRICA.cubCe, composicao: [] };
+  else if(ref.tipo==='custo') fabrica = COMPOSICOES_REFERENCIA_FABRICA.custos[ref.idx];
+  else fabrica = COMPOSICOES_REFERENCIA_FABRICA.pavimentacao[ref.idx];
+  composicaoDetalheEdicao.composicao = fabrica.composicao ? JSON.parse(JSON.stringify(fabrica.composicao)) : [];
+  const taxaInput = document.getElementById('compTaxaFinal');
+  if(taxaInput) taxaInput.value = fabrica.taxa.toFixed(2);
+  renderComposicaoDetalheTabela();
+  mostrarAviso('Valores de fábrica carregados no formulário — clique em Salvar pra confirmar.', 'info');
 }
 function tipoLabel(tipo){
   return { area_total:'Área total', area_viaria:'Área viária', area_verde_institucional:'Área verde/institucional', por_lote:'Por lote', fixo:'Área da edificação (m²)' }[tipo] || tipo;
