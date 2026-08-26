@@ -458,27 +458,27 @@ const OPCOES_PADRAO_EMPREENDIMENTO = [
    topografia: true → a taxa é multiplicada pelo multiplicador de topografia escolhido
    fonte: de onde vem a taxa de referência, mostrado na tela */
 const BANCO_CUSTOS_REFERENCIA = [
-  { item:'Topografia', tipo:'area_total', taxa:1.00, fonte:'Mercado — levantamento planialtimétrico' },
-  { item:'Licença de supressão vegetal', tipo:'area_total', taxa:1.80, fonte:'Estimativa de mercado (taxas e licenciamento)' },
-  { item:'Supressão vegetal', tipo:'area_total', taxa:2.20, topografia:true, fonte:'Estimativa de mercado' },
-  { item:'Despachantes', tipo:'area_total', taxa:3.50, fonte:'Estimativa de mercado' },
-  { item:'Marketing', tipo:'area_total', taxa:1.00, fonte:'Estimativa de mercado' },
-  { item:'Terraplenagem', tipo:'area_total', taxa:9.50, topografia:true, fonte:'SINAPI-CE (escavação, carga e transporte)' },
-  { item:'Muro', tipo:'area_total', taxa:4.50, fonte:'Estimativa de mercado' },
-  { item:'Drenagem geral', tipo:'area_viaria', taxa:14.00, fonte:'SINAPI-CE (galerias e captação pluvial)' },
-  { item:'Pavimentação', tipo:'area_viaria', taxa:55.00, fonte:'SINAPI-CE + mercado (CBUQ)' }, // sobrescrito conforme o tipo escolhido
-  { item:'Meio-fio', tipo:'area_viaria', taxa:4.50, fonte:'SINAPI-CE (guia pré-moldada, convertido de R$/m linear)' },
-  { item:'Rede de água', tipo:'por_lote', taxa:1800, fonte:'Estimativa de mercado (ramal + rede)' },
-  { item:'Rede de esgoto', tipo:'por_lote', taxa:2400, fonte:'Estimativa de mercado (ramal + rede)' },
-  { item:'Energia / iluminação pública', tipo:'por_lote', taxa:1500, fonte:'Estimativa de mercado' },
-  { item:'Paisagismo', tipo:'area_verde_institucional', taxa:12.00, fonte:'Estimativa de mercado' },
-  { item:'Área institucional', tipo:'area_verde_institucional', taxa:18.00, fonte:'Estimativa de mercado' },
+  { item:'Topografia', tipo:'area_total', taxa:1.00, fonte:'Estimativa de mercado — levantamento planialtimétrico' },
+  { item:'Licença de supressão vegetal', tipo:'area_total', taxa:1.80, fonte:'Estimativa de mercado (taxas e licenciamento — sem composição SINAPI aplicável)' },
+  { item:'Supressão vegetal', tipo:'area_total', taxa:2.20, topografia:true, fonte:'Estimativa de mercado (sem composição SINAPI aplicável)' },
+  { item:'Despachantes', tipo:'area_total', taxa:3.50, fonte:'Estimativa de mercado (sem composição SINAPI aplicável)' },
+  { item:'Marketing', tipo:'area_total', taxa:1.00, fonte:'Estimativa de mercado (sem composição SINAPI aplicável)' },
+  { item:'Terraplenagem', tipo:'area_total', taxa:10.00, topografia:true, fonte:'Composto SINAPI-CE: escavação (93336, R$4,11/m³) + carga/transporte (100978, R$3,92/m³), ~0,8 m³ de movimentação por m²' },
+  { item:'Muro', tipo:'area_total', taxa:4.50, fonte:'Estimativa de mercado (varia muito por tipo de muro — sem composição SINAPI única aplicável)' },
+  { item:'Drenagem geral', tipo:'area_viaria', taxa:14.00, fonte:'Estimativa de mercado (depende do projeto de drenagem específico — sem composição SINAPI genérica por m²)' },
+  { item:'Pavimentação', tipo:'area_viaria', taxa:62.00, fonte:'Composto SINAPI-CE: base+compactação (R$10,40/m²) + imprimação 96401 (R$6,05/m²) + pintura de ligação 72943 (R$2,71/m²) + CBUQ e=5cm 95994 (R$40,59/m²), com BDI de referência' }, // sobrescrito conforme o tipo escolhido
+  { item:'Meio-fio', tipo:'area_viaria', taxa:13.30, fonte:'SINAPI-CE — guia+sarjeta (R$59,98/m linear), convertido a R$/m² assumindo faixa viária de 9m com meio-fio dos dois lados' },
+  { item:'Rede de água', tipo:'por_lote', taxa:1800, fonte:'Estimativa de mercado (depende do traçado da rede — sem composição SINAPI por lote aplicável)' },
+  { item:'Rede de esgoto', tipo:'por_lote', taxa:2400, fonte:'Estimativa de mercado (depende do traçado da rede — sem composição SINAPI por lote aplicável)' },
+  { item:'Energia / iluminação pública', tipo:'por_lote', taxa:1500, fonte:'Estimativa de mercado (depende do projeto elétrico — sem composição SINAPI por lote aplicável)' },
+  { item:'Paisagismo', tipo:'area_verde_institucional', taxa:12.00, fonte:'Estimativa de mercado (sem composição SINAPI aplicável)' },
+  { item:'Área institucional', tipo:'area_verde_institucional', taxa:18.00, fonte:'Estimativa de mercado (sem composição SINAPI aplicável)' },
 ];
 const OPCOES_PAVIMENTACAO = [
-  { id:'asfalto', nome:'Asfalto (CBUQ)', taxa:55.00, fonte:'SINAPI-CE + mercado (CBUQ)' },
-  { id:'bloquete', nome:'Bloquete / pavers', taxa:48.00, fonte:'Estimativa de mercado' },
-  { id:'paralelepipedo', nome:'Paralelepípedo', taxa:40.00, fonte:'Estimativa de mercado' },
-  { id:'cascalho', nome:'Cascalho / terra (sem pavimentação)', taxa:8.00, fonte:'Estimativa de mercado' },
+  { id:'asfalto', nome:'Asfalto (CBUQ)', taxa:62.00, fonte:'Composto SINAPI-CE: base+compactação + imprimação 96401 + pintura de ligação 72943 + CBUQ e=5cm 95994, com BDI de referência' },
+  { id:'bloquete', nome:'Bloquete / pavers', taxa:54.00, fonte:'Estimativa de mercado, proporcional ao custo composto do asfalto (SINAPI tem grupo "Pavimento Intertravado", não detalhado aqui)' },
+  { id:'paralelepipedo', nome:'Paralelepípedo', taxa:45.00, fonte:'Estimativa de mercado, proporcional ao custo composto do asfalto' },
+  { id:'cascalho', nome:'Cascalho / terra (sem pavimentação)', taxa:9.00, fonte:'Estimativa de mercado' },
 ];
 
 function projetoModelo(){
