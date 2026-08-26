@@ -63,6 +63,10 @@
     font-size:13px;font-weight:600;
   }
   button:hover{background:var(--paper-2);}
+  button.icon-btn{
+    padding:8px 11px;font-size:15px;line-height:1;min-width:38px;
+    display:inline-flex;align-items:center;justify-content:center;
+  }
   button.primary{background:var(--brick);border-color:var(--brick-dark);color:#fff;}
   button.primary:hover{background:var(--brick-dark);}
   button.ghost{border-color:var(--line);font-weight:400;color:var(--ink-soft);}
@@ -1640,10 +1644,10 @@ function renderLista(){
         <div class="sub">Loteamentos e incorporações</div>
       </div>
       <div class="hdr-actions">
-        <button class="ghost" data-trocar-senha="1" title="Trocar senha">🔒</button>
-        <button class="ghost" data-logout="1" title="Sair">Sair</button>
-        <button class="ghost" data-import-trigger="1">Importar</button>
-        ${state.projetos.length>0 ? `<button class="ghost" data-export-all="1">Exportar tudo</button>` : ''}
+        <button class="ghost icon-btn" data-trocar-senha="1" title="Trocar senha">🔒</button>
+        <button class="ghost icon-btn" data-logout="1" title="Sair">⏻</button>
+        <button class="ghost icon-btn" data-import-trigger="1" title="Importar">⇧</button>
+        ${state.projetos.length>0 ? `<button class="ghost icon-btn" data-export-all="1" title="Exportar tudo">⭳</button>` : ''}
         <button class="primary" data-new="1">+ Novo projeto</button>
       </div>
     </div>
@@ -1821,14 +1825,14 @@ function renderEditor(p){
     <div class="toolbar">
       <button class="back" data-back="1">← Todos os projetos</button>
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
-        <button data-recolher-tudo="1" class="ghost">Recolher tudo</button>
-        <button data-expandir-tudo="1" class="ghost">Expandir tudo</button>
-        <button data-abrir-estimativa="1" class="btn-estimativa">⚡ Auto</button>
-        <button data-abrir-composicoes="1" class="ghost">Tabelas de composição</button>
-        <button data-relatorio="${p.id}" class="ghost">Relatório</button>
-        <button data-export="${p.id}" class="ghost">Exportar</button>
-        <button data-dup="1" class="ghost">Duplicar</button>
-        <button data-del-current="1" class="danger">Excluir</button>
+        <button data-recolher-tudo="1" class="ghost icon-btn" title="Recolher tudo">⊟</button>
+        <button data-expandir-tudo="1" class="ghost icon-btn" title="Expandir tudo">⊞</button>
+        <button data-abrir-estimativa="1" class="btn-estimativa icon-btn" title="Auto — gerar orçamento urbanístico estimado">⚡</button>
+        <button data-abrir-composicoes="1" class="ghost icon-btn" title="Tabelas de composição">▦</button>
+        <button data-relatorio="${p.id}" class="ghost icon-btn" title="Relatório">▤</button>
+        <button data-export="${p.id}" class="ghost icon-btn" title="Exportar">⭳</button>
+        <button data-dup="1" class="ghost icon-btn" title="Duplicar">⧉</button>
+        <button data-del-current="1" class="danger icon-btn" title="Excluir">✕</button>
       </div>
     </div>
     <input class="title-input" id="titleInput" value="${escapeHtml(p.nome)}">
