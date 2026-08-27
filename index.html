@@ -2135,7 +2135,7 @@ function abrirModalEstimativa(){
     pctVerdeInstitucional: URBANISTICO_PADRAO.pctVerdeInstitucional,
     fatorAproveitamento: URBANISTICO_PADRAO.fatorAproveitamento,
   };
-  estimativaAplicarLotes = true;
+  estimativaAplicarLotes = !(Number(p.lotes.totalLotes)>0);
   estimativaGrid = gerarGridEstimativa(p, estimativaParams);
   renderModalEstimativa();
 }
@@ -2397,6 +2397,13 @@ function restaurarComposicaoFabrica(chave){
   renderComposicaoDetalheTabela();
   mostrarAviso('Valores de fábrica carregados no formulário — clique em Salvar pra confirmar.', 'info');
 }
+function compararValorHtml(estimado, lancado){
+  if(!(lancado>0)) return '<span class="footnote" style="text-align:center;display:block;">—</span>';
+  const diff = estimado - lancado;
+  if(Math.abs(diff) < 0.01) return `<span title="Igual ao valor lançado" style="color:var(--ink-soft);font-weight:700;display:block;text-align:center;">=</span>`;
+  if(diff > 0) return `<span title="Estimado é ${fmtBRL(diff)} maior que o lançado" style="color:var(--good);font-weight:700;display:block;text-align:center;">▲</span>`;
+  return `<span title="Estimado é ${fmtBRL(Math.abs(diff))} menor que o lançado" style="color:var(--bad);font-weight:700;display:block;text-align:center;">▼</span>`;
+}
 function tipoLabel(tipo){
   return { area_total:'Área total', area_viaria:'Área viária', area_verde_institucional:'Área verde/institucional', por_lote:'Por lote', fixo:'Área da edificação (m²)', perimetro:'Perímetro do terreno' }[tipo] || tipo;
 }
@@ -2527,7 +2534,7 @@ function renderEstimativaResumoUrbanistico(){
         <label style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;">
           <input type="checkbox" id="estimativaAplicarLotes" ${estimativaAplicarLotes?'checked':''}> Quantidade de lotes estimada
         </label>
-        ${totalLotesExistente>0 ? `<span class="footnote" style="color:var(--amber);font-weight:600;display:block;margin-top:2px;">⚠ o projeto já tem ${totalLotesExistente} lotes lançados — aplicar vai sobrescrever</span>` : ''}
+        ${totalLotesExistente>0 ? `<span class="footnote" style="color:var(--amber);font-weight:600;display:block;margin-top:2px;">⚠ o projeto já tem ${totalLotesExistente} lotes lançados — desmarcado por padrão</span>` : ''}
       </span>
       <span class="v pos">${urb.qtdLotesEstimada}</span>
     </div>`;
@@ -2549,6 +2556,7 @@ function renderEstimativaTabela(){
       <th>Taxa</th>
       <th>Valor estimado</th>
       <th>Valor lançado</th>
+      <th title="Compara o valor estimado com o valor lançado">Comp.</th>
       <th></th>
     </tr></thead>
     <tbody>
@@ -2567,11 +2575,12 @@ function renderEstimativaTabela(){
           </td>
           <td class="row-total pos" data-valor-estimado-cel="${i}">${fmtBRL(l.valor)}</td>
           <td class="row-total" style="color:${l.valorJaExistente>0?'var(--amber)':'var(--ink-soft)'};">${l.valorJaExistente>0?fmtBRL(l.valorJaExistente):'—'}</td>
+          <td>${compararValorHtml(l.valor, l.valorJaExistente)}</td>
           <td class="cel-acao">${l.editado?`<button class="ghost small" data-estimativa-reset="${i}" title="Voltar ao valor de referência">Padrão</button>`:''}</td>
         </tr>`).join('')}
-      <tr class="total-row"><td></td><td class="item-nome" style="position:static;">Total já lançado no projeto</td><td></td><td></td><td></td><td class="row-total" data-estimativa-total-lancado style="color:var(--amber);">${fmtBRL(totalJaLancado)}</td><td></td></tr>
-      <tr class="total-row"><td></td><td class="item-nome" style="position:static;">Total estimado (todos os itens da tabela)</td><td></td><td></td><td class="row-total" data-estimativa-total-geral>${fmtBRL(totalEstimadoGeral)}</td><td></td><td></td></tr>
-      <tr class="total-row"><td></td><td class="item-nome" style="position:static;">Total selecionado (será aplicado)</td><td></td><td></td><td class="row-total" data-estimativa-total-cel style="font-size:14px;">${fmtBRL(totalSelecionado)}</td><td></td><td></td></tr>
+      <tr class="total-row"><td></td><td class="item-nome" style="position:static;">Total já lançado no projeto</td><td></td><td></td><td></td><td class="row-total" data-estimativa-total-lancado style="color:var(--amber);">${fmtBRL(totalJaLancado)}</td><td></td><td></td></tr>
+      <tr class="total-row"><td></td><td class="item-nome" style="position:static;">Total estimado (todos os itens da tabela)</td><td></td><td></td><td class="row-total" data-estimativa-total-geral>${fmtBRL(totalEstimadoGeral)}</td><td></td><td></td><td></td></tr>
+      <tr class="total-row"><td></td><td class="item-nome" style="position:static;">Total selecionado (será aplicado)</td><td></td><td></td><td class="row-total" data-estimativa-total-cel style="font-size:14px;">${fmtBRL(totalSelecionado)}</td><td></td><td></td><td></td></tr>
     </tbody>
   </table>`;
 
