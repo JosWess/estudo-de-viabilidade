@@ -468,6 +468,11 @@ const MULTIPLICADOR_TOPOGRAFIA = [
   { id:'ondulado', nome:'Aclive/Declive Leve', mult:1.3 },
   { id:'montanhoso', nome:'Aclive/Declive Acentuado', mult:1.7 },
 ];
+const MULTIPLICADOR_DENSIDADE_VEGETAL = [
+  { id:'pouco_denso', nome:'Pouco denso', mult:1.0 },
+  { id:'medio', nome:'Médio', mult:1.5 },
+  { id:'denso', nome:'Denso', mult:2.15 },
+];
 const OPCOES_PADRAO_EMPREENDIMENTO = [
   { id:'economico', nome:'Econômico', areaPortaria:30, areaClube:0 },
   { id:'medio', nome:'Médio', areaPortaria:60, areaClube:150 },
@@ -481,7 +486,7 @@ const OPCOES_PADRAO_EMPREENDIMENTO = [
 let BANCO_CUSTOS_REFERENCIA = [
   { item:'Topografia', tipo:'area_total', taxa:1.00, fonte:'Estimativa de mercado — levantamento planialtimétrico', fonteResumo:'Estimativa de mercado' },
   { item:'Licença de supressão vegetal', tipo:'area_total', taxa:1.80, fonte:'Estimativa de mercado (taxas e licenciamento — sem composição SINAPI aplicável)', fonteResumo:'Estimativa de mercado' },
-  { item:'Supressão vegetal', tipo:'area_total', taxa:1.49, topografia:true,
+  { item:'Supressão vegetal', tipo:'area_total', taxa:1.49, topografia:true, densidadeVegetal:true,
     fonte:'Composição por quantidade física real (SINAPI-CE): 98525 limpeza mecanizada (R$0,72/m², direto) + 98529/98526 corte e remoção de árvore isolada (R$229,28/árvore × 15 árvores/ha, ref. Decreto 47.749/2019-MG) + 100982 carga de entulho (R$10,22/m³ × 0,015 m³/m²) + 93591 transporte (R$3,70/m³×km × 0,015 m³/m² × 5km, DMT de referência de mercado)',
     fonteResumo:'SINAPI-CE (composição por quantidade física)',
     composicao:[
@@ -501,7 +506,7 @@ let BANCO_CUSTOS_REFERENCIA = [
       { codigo:'100982', descricao:'Carga, manobra e descarga de solo excedente, caminhão 10m³, com escavadeira — 50% do material escavado vira excedente', unidade:'m³', valorUnit:10.22, quantidade:0.10 },
       { codigo:'93591', descricao:'Transporte com caminhão basculante 14m³, via urbana, leito natural — DMT de 5km até o bota-fora', unidade:'m³xkm', valorUnit:3.70, quantidade:0.50 },
     ] },
-  { item:'Muro', tipo:'area_total', taxa:4.50, fonte:'Estimativa de mercado (varia muito por tipo de muro — sem composição SINAPI única aplicável)', fonteResumo:'Estimativa de mercado' },
+  { item:'Muro', tipo:'perimetro', taxa:250.00, fonte:'Estimativa de mercado — muro de bloco de concreto, altura ~2m, com fundação. Mercado 2026: R$250 a R$700/m linear conforme altura e acabamento (fonte: pesquisas de preço 2026 de reformeconstrua.com.br e outras). Usei o piso da faixa, por ser um fechamento simples de loteamento, sem reboco/pintura completos. Sem composição SINAPI única aplicável.', fonteResumo:'Estimativa de mercado (por perímetro)' },
   { item:'Drenagem geral', tipo:'area_viaria', taxa:14.00, fonte:'Estimativa de mercado (depende do projeto de drenagem específico — sem composição SINAPI genérica por m²)', fonteResumo:'Estimativa de mercado' },
   { item:'Pavimentação', tipo:'area_viaria', taxa:94.20, fonte:'SINAPI-CE 92398 (execução piso intertravado, bloco 20x10cm e=8cm) — preço real de Fortaleza, não média nacional', fonteResumo:'SINAPI-CE (Fortaleza)' }, // composicao definida em OPCOES_PAVIMENTACAO, conforme o tipo escolhido
   { item:'Meio-fio', tipo:'area_viaria', taxa:9.38,
@@ -2053,12 +2058,13 @@ function calcularMotorUrbanistico(p, params){
   const tamanhoLote = Math.max(Number(params.tamanhoLote)||1,1);
   const qtdLotesEstimada = Math.floor(alvLiquida / tamanhoLote);
 
-  return { areaTotal, areaViaria, areaVerdeInst, areaPublicaTotal, alvBruta, alvLiquida, qtdLotesEstimada };
+  return { areaTotal, areaViaria, areaVerdeInst, areaPublicaTotal, alvBruta, alvLiquida, qtdLotesEstimada, perimetro: Number(p.terreno.perimetro)||0 };
 }
 
 function gerarGridEstimativa(p, params, gridAnterior){
   const urb = calcularMotorUrbanistico(p, params);
   const multTopo = MULTIPLICADOR_TOPOGRAFIA.find(m=>m.id===params.topografia) || MULTIPLICADOR_TOPOGRAFIA[0];
+  const multDensidade = MULTIPLICADOR_DENSIDADE_VEGETAL.find(m=>m.id===params.densidadeVegetal) || MULTIPLICADOR_DENSIDADE_VEGETAL[0];
   const padrao = OPCOES_PADRAO_EMPREENDIMENTO.find(o=>o.id===params.padrao) || OPCOES_PADRAO_EMPREENDIMENTO[0];
   const pavimento = OPCOES_PAVIMENTACAO.find(o=>o.id===params.pavimentacao) || OPCOES_PAVIMENTACAO[0];
 
@@ -2073,8 +2079,9 @@ function gerarGridEstimativa(p, params, gridAnterior){
     else if(ref.tipo==='area_viaria') base = urb.areaViaria;
     else if(ref.tipo==='area_verde_institucional') base = urb.areaVerdeInst;
     else if(ref.tipo==='por_lote') base = urb.qtdLotesEstimada;
+    else if(ref.tipo==='perimetro') base = urb.perimetro;
     else base = 1;
-    const mult = ref.topografia ? multTopo.mult : 1;
+    const mult = (ref.topografia ? multTopo.mult : 1) * (ref.densidadeVegetal ? multDensidade.mult : 1);
 
     const anterior = acharAnterior(ref.item);
     const editado = anterior ? anterior.editado : false;
@@ -2109,6 +2116,7 @@ function abrirModalEstimativa(){
   }
   estimativaParams = {
     topografia: 'plano',
+    densidadeVegetal: 'pouco_denso',
     tamanhoLote: 200,
     padrao: 'medio',
     pavimentacao: 'bloquete',
@@ -2378,10 +2386,10 @@ function restaurarComposicaoFabrica(chave){
   mostrarAviso('Valores de fábrica carregados no formulário — clique em Salvar pra confirmar.', 'info');
 }
 function tipoLabel(tipo){
-  return { area_total:'Área total', area_viaria:'Área viária', area_verde_institucional:'Área verde/institucional', por_lote:'Por lote', fixo:'Área da edificação (m²)' }[tipo] || tipo;
+  return { area_total:'Área total', area_viaria:'Área viária', area_verde_institucional:'Área verde/institucional', por_lote:'Por lote', fixo:'Área da edificação (m²)', perimetro:'Perímetro do terreno' }[tipo] || tipo;
 }
 function unidadeTaxa(tipo){
-  return { area_total:'R$/m²', area_viaria:'R$/m²', area_verde_institucional:'R$/m²', por_lote:'R$/lote', fixo:'R$/m² (CUB)' }[tipo] || 'R$';
+  return { area_total:'R$/m²', area_viaria:'R$/m²', area_verde_institucional:'R$/m²', por_lote:'R$/lote', fixo:'R$/m² (CUB)', perimetro:'R$/m linear' }[tipo] || 'R$';
 }
 function renderModalEstimativa(){
   fecharModalEstimativa();
@@ -2405,6 +2413,11 @@ function renderModalEstimativa(){
         <div class="field"><label>Topografia</label>
           <select id="estParamTopografia">
             ${MULTIPLICADOR_TOPOGRAFIA.map(m=>`<option value="${m.id}" ${estimativaParams.topografia===m.id?'selected':''}>${m.nome} (×${m.mult.toFixed(1)})</option>`).join('')}
+          </select>
+        </div>
+        <div class="field"><label>Densidade da vegetação</label>
+          <select id="estParamDensidadeVegetal">
+            ${MULTIPLICADOR_DENSIDADE_VEGETAL.map(m=>`<option value="${m.id}" ${estimativaParams.densidadeVegetal===m.id?'selected':''}>${m.nome} (×${m.mult.toFixed(2)})</option>`).join('')}
           </select>
         </div>
         <div class="field"><label>Tamanho médio do lote (m²)</label><input type="number" id="estParamTamanhoLote" value="${estimativaParams.tamanhoLote}"></div>
@@ -2441,7 +2454,7 @@ function renderModalEstimativa(){
     </div>`;
   document.body.appendChild(overlay);
 
-  ['estParamTopografia','estParamTamanhoLote','estParamPadrao','estParamPavimentacao','estParamPctViario','estParamPctVerde','estParamFator'].forEach(id=>{
+  ['estParamTopografia','estParamDensidadeVegetal','estParamTamanhoLote','estParamPadrao','estParamPavimentacao','estParamPctViario','estParamPctVerde','estParamFator'].forEach(id=>{
     overlay.querySelector('#'+id).addEventListener('input', atualizarParametrosEstimativa);
     overlay.querySelector('#'+id).addEventListener('change', atualizarParametrosEstimativa);
   });
@@ -2470,6 +2483,7 @@ function atualizarParametrosEstimativa(){
   if(!overlay) return;
   estimativaParams = {
     topografia: overlay.querySelector('#estParamTopografia').value,
+    densidadeVegetal: overlay.querySelector('#estParamDensidadeVegetal').value,
     tamanhoLote: Number(overlay.querySelector('#estParamTamanhoLote').value)||1,
     padrao: overlay.querySelector('#estParamPadrao').value,
     pavimentacao: overlay.querySelector('#estParamPavimentacao').value,
