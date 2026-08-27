@@ -486,7 +486,7 @@ const OPCOES_PADRAO_EMPREENDIMENTO = [
 let BANCO_CUSTOS_REFERENCIA = [
   { item:'Topografia', tipo:'area_total', taxa:1.00, fonte:'Estimativa de mercado — levantamento planialtimétrico', fonteResumo:'Estimativa de mercado' },
   { item:'Licença de supressão vegetal', tipo:'area_total', taxa:1.80, fonte:'Estimativa de mercado (taxas e licenciamento — sem composição SINAPI aplicável)', fonteResumo:'Estimativa de mercado' },
-  { item:'Supressão vegetal', tipo:'area_total', taxa:1.49, topografia:true, densidadeVegetal:true,
+  { item:'Supressão vegetal', tipo:'area_total', taxa:1.49, densidadeVegetal:true,
     fonte:'Composição por quantidade física real (SINAPI-CE): 98525 limpeza mecanizada (R$0,72/m², direto) + 98529/98526 corte e remoção de árvore isolada (R$229,28/árvore × 15 árvores/ha, ref. Decreto 47.749/2019-MG) + 100982 carga de entulho (R$10,22/m³ × 0,015 m³/m²) + 93591 transporte (R$3,70/m³×km × 0,015 m³/m² × 5km, DMT de referência de mercado)',
     fonteResumo:'SINAPI-CE (composição por quantidade física)',
     composicao:[
@@ -509,11 +509,12 @@ let BANCO_CUSTOS_REFERENCIA = [
   { item:'Muro', tipo:'perimetro', taxa:250.00, fonte:'Estimativa de mercado — muro de bloco de concreto, altura ~2m, com fundação. Mercado 2026: R$250 a R$700/m linear conforme altura e acabamento (fonte: pesquisas de preço 2026 de reformeconstrua.com.br e outras). Usei o piso da faixa, por ser um fechamento simples de loteamento, sem reboco/pintura completos. Sem composição SINAPI única aplicável.', fonteResumo:'Estimativa de mercado (por perímetro)' },
   { item:'Drenagem geral', tipo:'area_viaria', taxa:14.00, fonte:'Estimativa de mercado (depende do projeto de drenagem específico — sem composição SINAPI genérica por m²)', fonteResumo:'Estimativa de mercado' },
   { item:'Pavimentação', tipo:'area_viaria', taxa:94.20, fonte:'SINAPI-CE 92398 (execução piso intertravado, bloco 20x10cm e=8cm) — preço real de Fortaleza, não média nacional', fonteResumo:'SINAPI-CE (Fortaleza)' }, // composicao definida em OPCOES_PAVIMENTACAO, conforme o tipo escolhido
-  { item:'Meio-fio', tipo:'area_viaria', taxa:9.38,
-    fonte:'SINAPI-CE 94275 — guia (meio-fio) trecho reto, concreto pré-fabricado, dimensões 100x15x13x20cm (R$42,20/m linear), convertido a R$/m² assumindo faixa viária de 9m com meio-fio dos dois lados',
-    fonteResumo:'SINAPI-CE 94275',
+  { item:'Meio-fio e calçamento', tipo:'area_viaria', taxa:40.73,
+    fonte:'SINAPI-CE 94275 — guia (meio-fio) trecho reto, R$42,20/m linear + SINAPI-CE 92396 — passeio em piso intertravado, bloco retangular 20x10cm, R$94,06/m². Ambos os lados da via, passeio com largura assumida de 1,5m, convertido a R$/m² assumindo faixa viária de 9m',
+    fonteResumo:'SINAPI-CE 94275 + 92396',
     composicao:[
-      { codigo:'94275', descricao:'Assentamento de guia (meio-fio) trecho reto, concreto pré-fabricado 100x15x13x20cm, ambos os lados da via, ÷ 9m de largura de faixa', unidade:'m linear → m²', valorUnit:42.20, quantidade:'2 lados ÷ 9m de faixa' },
+      { codigo:'94275', descricao:'Assentamento de guia (meio-fio) trecho reto, concreto pré-fabricado 100x15x13x20cm, ambos os lados da via', unidade:'m linear', valorUnit:42.20, quantidade:'2 lados ÷ 9m de faixa' },
+      { codigo:'92396', descricao:'Execução de passeio em piso intertravado, bloco retangular cor natural 20x10cm — ambos os lados, largura de passeio assumida em 1,5m', unidade:'m²', valorUnit:94.06, quantidade:'2 lados × 1,5m de largura ÷ 9m de faixa' },
     ] },
   { item:'Rede de água', tipo:'por_lote', taxa:1800, fonte:'Estimativa de mercado (depende do traçado da rede — sem composição SINAPI por lote aplicável). Achado parcial: SINAPI-CE 105311 cobre só o assentamento do tubo (R$4,28/m), sem ligação predial/registro/hidrômetro — insuficiente pra substituir a estimativa de mercado.', fonteResumo:'Estimativa de mercado' },
   { item:'Rede de esgoto', tipo:'por_lote', taxa:2400, fonte:'Estimativa de mercado (depende do traçado da rede — sem composição SINAPI por lote aplicável). Achado parcial: SINAPI-CE 90733 cobre só o assentamento do tubo (R$3,78/m), sem ligação predial/caixas — insuficiente pra substituir a estimativa de mercado.', fonteResumo:'Estimativa de mercado' },
