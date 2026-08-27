@@ -2089,9 +2089,9 @@ function gerarGridEstimativa(p, params, gridAnterior){
     const editado = anterior ? anterior.editado : false;
     const taxaAtual = editado ? anterior.taxaAtual : taxaPadrao;
     const valor = round2(taxaAtual * base * mult);
-    const selecionado = anterior ? anterior.selecionado : true;
     const custoExistente = p.custos.find(c=>c.item.toLowerCase()===ref.item.toLowerCase());
     const valorJaExistente = custoExistente ? Number(custoExistente.valor)||0 : 0;
+    const selecionado = anterior ? anterior.selecionado : (valorJaExistente<=0);
     return { item:ref.item, tipo:ref.tipo, topografia:!!ref.topografia, densidadeVegetal:!!ref.densidadeVegetal, fonte, fonteResumo, taxaPadrao, taxaAtual, base, mult, editado, valor, selecionado, valorJaExistente };
   });
 
@@ -2101,18 +2101,20 @@ function gerarGridEstimativa(p, params, gridAnterior){
   const editadoPortaria = anteriorPortaria ? anteriorPortaria.editado : false;
   const taxaPortariaPadrao = CUB_CE;
   const taxaPortariaAtual = editadoPortaria ? anteriorPortaria.taxaAtual : taxaPortariaPadrao;
-  const selecionadoPortaria = anteriorPortaria ? anteriorPortaria.selecionado : true;
   const custoPortariaExistente = p.custos.find(c=>c.item.toLowerCase()==='portaria');
-  linhas.push({ item:'Portaria', tipo:'fixo', topografia:false, fonte:cubFonte, fonteResumo:cubFonteResumo, taxaPadrao:taxaPortariaPadrao, taxaAtual:taxaPortariaAtual, base:padrao.areaPortaria, mult:1, editado:editadoPortaria, valor: round2(taxaPortariaAtual*padrao.areaPortaria), selecionado:selecionadoPortaria, valorJaExistente: custoPortariaExistente ? Number(custoPortariaExistente.valor)||0 : 0 });
+  const valorJaExistentePortaria = custoPortariaExistente ? Number(custoPortariaExistente.valor)||0 : 0;
+  const selecionadoPortaria = anteriorPortaria ? anteriorPortaria.selecionado : (valorJaExistentePortaria<=0);
+  linhas.push({ item:'Portaria', tipo:'fixo', topografia:false, fonte:cubFonte, fonteResumo:cubFonteResumo, taxaPadrao:taxaPortariaPadrao, taxaAtual:taxaPortariaAtual, base:padrao.areaPortaria, mult:1, editado:editadoPortaria, valor: round2(taxaPortariaAtual*padrao.areaPortaria), selecionado:selecionadoPortaria, valorJaExistente: valorJaExistentePortaria });
 
   if(padrao.areaClube>0){
     const anteriorClube = acharAnterior('Clube');
     const editadoClube = anteriorClube ? anteriorClube.editado : false;
     const taxaClubePadrao = CUB_CE;
     const taxaClubeAtual = editadoClube ? anteriorClube.taxaAtual : taxaClubePadrao;
-    const selecionadoClube = anteriorClube ? anteriorClube.selecionado : true;
     const custoClubeExistente = p.custos.find(c=>c.item.toLowerCase()==='clube');
-    linhas.push({ item:'Clube', tipo:'fixo', topografia:false, fonte:cubFonte, fonteResumo:cubFonteResumo, taxaPadrao:taxaClubePadrao, taxaAtual:taxaClubeAtual, base:padrao.areaClube, mult:1, editado:editadoClube, valor: round2(taxaClubeAtual*padrao.areaClube), selecionado:selecionadoClube, valorJaExistente: custoClubeExistente ? Number(custoClubeExistente.valor)||0 : 0 });
+    const valorJaExistenteClube = custoClubeExistente ? Number(custoClubeExistente.valor)||0 : 0;
+    const selecionadoClube = anteriorClube ? anteriorClube.selecionado : (valorJaExistenteClube<=0);
+    linhas.push({ item:'Clube', tipo:'fixo', topografia:false, fonte:cubFonte, fonteResumo:cubFonteResumo, taxaPadrao:taxaClubePadrao, taxaAtual:taxaClubeAtual, base:padrao.areaClube, mult:1, editado:editadoClube, valor: round2(taxaClubeAtual*padrao.areaClube), selecionado:selecionadoClube, valorJaExistente: valorJaExistenteClube });
   }
   return linhas;
 }
@@ -2535,7 +2537,9 @@ function renderEstimativaResumoUrbanistico(){
 function renderEstimativaTabela(){
   const wrap = document.getElementById('estimativaTabelaWrap');
   if(!wrap) return;
-  const total = estimativaGrid.filter(l=>l.selecionado).reduce((s,l)=>s+l.valor,0);
+  const totalSelecionado = estimativaGrid.filter(l=>l.selecionado).reduce((s,l)=>s+l.valor,0);
+  const totalEstimadoGeral = estimativaGrid.reduce((s,l)=>s+l.valor,0);
+  const totalJaLancado = estimativaGrid.reduce((s,l)=>s+l.valorJaExistente,0);
 
   wrap.innerHTML = `<table class="cronograma" style="min-width:0;">
     <thead><tr>
@@ -2544,6 +2548,7 @@ function renderEstimativaTabela(){
       <th style="text-align:left;">Fonte</th>
       <th>Taxa</th>
       <th>Valor estimado</th>
+      <th>Valor lançado</th>
       <th></th>
     </tr></thead>
     <tbody>
@@ -2552,7 +2557,7 @@ function renderEstimativaTabela(){
           <td style="text-align:center;"><input type="checkbox" data-estimativa-select="${i}" ${l.selecionado?'checked':''}></td>
           <td class="item-nome" style="position:static;">${escapeHtml(l.item)}${l.topografia?' <span class="badge warn" style="margin-left:4px;">topografia</span>':''}${l.densidadeVegetal?' <span class="badge warn" style="margin-left:4px;">densidade vegetal</span>':''}
             <div class="footnote" style="margin:2px 0 0;">${tipoLabel(l.tipo)}</div>
-            ${l.valorJaExistente>0 ? `<div class="footnote" style="margin:2px 0 0;color:var(--amber);font-weight:600;">⚠ já tem ${fmtBRL(l.valorJaExistente)} lançado — aplicar vai sobrescrever</div>` : ''}
+            ${l.valorJaExistente>0 ? `<div class="footnote" style="margin:2px 0 0;color:var(--amber);font-weight:600;">⚠ já tem valor lançado — desmarcado por padrão</div>` : ''}
           </td>
           <td style="font-family:var(--mono);font-size:10.5px;color:var(--ink-soft);max-width:170px;white-space:normal;" title="${escapeHtml(l.fonte)}">${escapeHtml(l.fonteResumo || l.fonte)}</td>
           <td class="cel">
@@ -2560,10 +2565,13 @@ function renderEstimativaTabela(){
             <div class="footnote" style="margin:2px 0 0;text-align:right;">${unidadeTaxa(l.tipo)}</div>
             ${l.mult!==1 ? `<div class="footnote" data-mult-info="${i}" style="margin:2px 0 0;text-align:right;color:var(--steel);font-weight:600;">× ${l.mult.toFixed(2)} = ${fmtBRL(l.taxaAtual*l.mult)}</div>` : ''}
           </td>
-          <td class="row-total pos">${fmtBRL(l.valor)}</td>
+          <td class="row-total pos" data-valor-estimado-cel="${i}">${fmtBRL(l.valor)}</td>
+          <td class="row-total" style="color:${l.valorJaExistente>0?'var(--amber)':'var(--ink-soft)'};">${l.valorJaExistente>0?fmtBRL(l.valorJaExistente):'—'}</td>
           <td class="cel-acao">${l.editado?`<button class="ghost small" data-estimativa-reset="${i}" title="Voltar ao valor de referência">Padrão</button>`:''}</td>
         </tr>`).join('')}
-      <tr class="total-row"><td></td><td class="item-nome" style="position:static;">Total (só itens marcados)</td><td></td><td></td><td class="row-total" data-estimativa-total-cel>${fmtBRL(total)}</td><td></td></tr>
+      <tr class="total-row"><td></td><td class="item-nome" style="position:static;">Total já lançado no projeto</td><td></td><td></td><td></td><td class="row-total" data-estimativa-total-lancado style="color:var(--amber);">${fmtBRL(totalJaLancado)}</td><td></td></tr>
+      <tr class="total-row"><td></td><td class="item-nome" style="position:static;">Total estimado (todos os itens da tabela)</td><td></td><td></td><td class="row-total" data-estimativa-total-geral>${fmtBRL(totalEstimadoGeral)}</td><td></td><td></td></tr>
+      <tr class="total-row"><td></td><td class="item-nome" style="position:static;">Total selecionado (será aplicado)</td><td></td><td></td><td class="row-total" data-estimativa-total-cel style="font-size:14px;">${fmtBRL(totalSelecionado)}</td><td></td><td></td></tr>
     </tbody>
   </table>`;
 
@@ -2576,7 +2584,7 @@ function renderEstimativaTabela(){
       linha.valor = round2(linha.taxaAtual * linha.base * linha.mult);
       atualizarEstimativaTotal();
       const tr = el.closest('tr');
-      tr.querySelector('.row-total').textContent = fmtBRL(linha.valor);
+      tr.querySelector(`[data-valor-estimado-cel="${idx}"]`).textContent = fmtBRL(linha.valor);
       const multInfo = tr.querySelector('[data-mult-info]');
       if(multInfo) multInfo.textContent = `× ${linha.mult.toFixed(2)} = ${fmtBRL(linha.taxaAtual*linha.mult)}`;
       const acaoCel = tr.querySelector('.cel-acao');
@@ -2611,10 +2619,17 @@ function resetarLinhaEstimativa(idx){
   renderEstimativaTabela();
 }
 function atualizarEstimativaTotal(){
+  const totalSelecionado = estimativaGrid.filter(l=>l.selecionado).reduce((s,l)=>s+l.valor,0);
+  const totalEstimadoGeral = estimativaGrid.reduce((s,l)=>s+l.valor,0);
+  const totalJaLancado = estimativaGrid.reduce((s,l)=>s+l.valorJaExistente,0);
   const totalEl = document.querySelector('[data-estimativa-total]');
-  if(totalEl) totalEl.textContent = fmtBRL(estimativaGrid.filter(l=>l.selecionado).reduce((s,l)=>s+l.valor,0));
+  if(totalEl) totalEl.textContent = fmtBRL(totalSelecionado);
   const totalCel = document.querySelector('[data-estimativa-total-cel]');
-  if(totalCel) totalCel.textContent = fmtBRL(estimativaGrid.filter(l=>l.selecionado).reduce((s,l)=>s+l.valor,0));
+  if(totalCel) totalCel.textContent = fmtBRL(totalSelecionado);
+  const totalGeralCel = document.querySelector('[data-estimativa-total-geral]');
+  if(totalGeralCel) totalGeralCel.textContent = fmtBRL(totalEstimadoGeral);
+  const totalLancadoCel = document.querySelector('[data-estimativa-total-lancado]');
+  if(totalLancadoCel) totalLancadoCel.textContent = fmtBRL(totalJaLancado);
 }
 
 
