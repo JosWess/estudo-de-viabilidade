@@ -2087,7 +2087,7 @@ function gerarGridEstimativa(p, params, gridAnterior){
     const editado = anterior ? anterior.editado : false;
     const taxaAtual = editado ? anterior.taxaAtual : taxaPadrao;
     const valor = round2(taxaAtual * base * mult);
-    return { item:ref.item, tipo:ref.tipo, topografia:!!ref.topografia, fonte, fonteResumo, taxaPadrao, taxaAtual, base, mult, editado, valor };
+    return { item:ref.item, tipo:ref.tipo, topografia:!!ref.topografia, densidadeVegetal:!!ref.densidadeVegetal, fonte, fonteResumo, taxaPadrao, taxaAtual, base, mult, editado, valor };
   });
 
   const cubFonte = `CUB/m² Ceará (Sinduscon-CE, R$ ${CUB_CE.toFixed(2)}/m²) × área da edificação`;
@@ -2522,13 +2522,14 @@ function renderEstimativaTabela(){
     <tbody>
       ${estimativaGrid.map((l,i)=>`
         <tr>
-          <td class="item-nome" style="position:static;">${escapeHtml(l.item)}${l.topografia?' <span class="badge warn" style="margin-left:4px;">topografia</span>':''}
+          <td class="item-nome" style="position:static;">${escapeHtml(l.item)}${l.topografia?' <span class="badge warn" style="margin-left:4px;">topografia</span>':''}${l.densidadeVegetal?' <span class="badge warn" style="margin-left:4px;">densidade vegetal</span>':''}
             <div class="footnote" style="margin:2px 0 0;">${tipoLabel(l.tipo)}</div>
           </td>
           <td style="font-family:var(--mono);font-size:10.5px;color:var(--ink-soft);max-width:170px;white-space:normal;" title="${escapeHtml(l.fonte)}">${escapeHtml(l.fonteResumo || l.fonte)}</td>
           <td class="cel">
             <input type="text" inputmode="decimal" class="money-in" data-estimativa-taxa="${i}" value="${l.taxaAtual.toFixed(2)}" style="width:90px;">
             <div class="footnote" style="margin:2px 0 0;text-align:right;">${unidadeTaxa(l.tipo)}</div>
+            ${l.mult!==1 ? `<div class="footnote" data-mult-info="${i}" style="margin:2px 0 0;text-align:right;color:var(--steel);font-weight:600;">× ${l.mult.toFixed(2)} = ${fmtBRL(l.taxaAtual*l.mult)}</div>` : ''}
           </td>
           <td class="row-total pos">${fmtBRL(l.valor)}</td>
           <td class="cel-acao">${l.editado?`<button class="ghost small" data-estimativa-reset="${i}" title="Voltar ao valor de referência">Padrão</button>`:''}</td>
@@ -2547,6 +2548,8 @@ function renderEstimativaTabela(){
       atualizarEstimativaTotal();
       const tr = el.closest('tr');
       tr.querySelector('.row-total').textContent = fmtBRL(linha.valor);
+      const multInfo = tr.querySelector('[data-mult-info]');
+      if(multInfo) multInfo.textContent = `× ${linha.mult.toFixed(2)} = ${fmtBRL(linha.taxaAtual*linha.mult)}`;
       const acaoCel = tr.querySelector('.cel-acao');
       acaoCel.innerHTML = linha.editado ? `<button class="ghost small" data-estimativa-reset="${idx}" title="Voltar ao valor de referência">Padrão</button>` : '';
       if(linha.editado) acaoCel.querySelector('button').addEventListener('click', ()=>resetarLinhaEstimativa(idx));
