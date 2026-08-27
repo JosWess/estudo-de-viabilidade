@@ -578,7 +578,7 @@ function projetoModelo(){
     criadoEm: new Date().toISOString(),
     terreno:{ modo:'auto_total', considerarPermuta:true, considerarCompraFluxo:true, area:53531.29, perimetro: Math.round(4*Math.sqrt(53531.29)), valorCompra:6500000, sinal:500000, qtdParcelas:10, valorParcela:100000, permuta:4500000, permutaModo:'valor', permutaPercentual:0, outrosCustos:500000, dataCompra:'2024-12-01' },
     lotes:{ totalLotes:243, lotesPermuta:75, lotesInvestidor:27 },
-    comissao:{ valorLote:127450.38, pct:6, abaterReceita:true },
+    comissao:{ valorLote:127450.38, pct:6, abaterReceita:true, formaPagamento:'proporcional', qtdParcelasComissao:1 },
     vendas:{
       inicioVendas:'2025-06-01',
       condicao:{ entradaPct:10, entradaParcelas:1, saldoModo:'simultaneo', qtdParcelas:72, valorBalao:0, intervaloBalaoMeses:12, reajusteSaldoAnual:0, outros:'' },
@@ -600,7 +600,7 @@ function novoProjeto(nome){
     criadoEm: new Date().toISOString(),
     terreno:{ modo:'auto_parcela', considerarPermuta:true, considerarCompraFluxo:true, area:0, perimetro:0, valorCompra:0, sinal:0, qtdParcelas:0, valorParcela:0, permuta:0, permutaModo:'valor', permutaPercentual:0, outrosCustos:0, dataCompra: hojeStr() },
     lotes:{ totalLotes:0, lotesPermuta:0, lotesInvestidor:0 },
-    comissao:{ valorLote:0, pct:0, abaterReceita:true },
+    comissao:{ valorLote:0, pct:0, abaterReceita:true, formaPagamento:'proporcional', qtdParcelasComissao:1 },
     vendas:{
       inicioVendas: hojeStr(),
       condicao:{ entradaPct:0, entradaParcelas:1, saldoModo:'simultaneo', qtdParcelas:1, valorBalao:0, intervaloBalaoMeses:12, reajusteSaldoAnual:0, outros:'' },
@@ -635,6 +635,10 @@ function normalizarProjeto(p){
   if(p.terreno && p.terreno.permutaModo===undefined){
     p.terreno.permutaModo = 'valor';
     p.terreno.permutaPercentual = 0;
+  }
+  if(p.comissao && p.comissao.formaPagamento===undefined){
+    p.comissao.formaPagamento = 'proporcional';
+    p.comissao.qtdParcelasComissao = 1;
   }
   if(p.vendas && p.vendas.investidores && p.vendas.investidores.considerarNoResultado===undefined) p.vendas.investidores.considerarNoResultado = false;
   if(p.vendas && !p.vendas.previsao) p.vendas.previsao = [];
@@ -721,8 +725,11 @@ function calcular(p){
   // fluxo de caixa mensal simplificado — só a venda direta tem cronograma de pagamento definido;
   // a receita de investidores, mesmo quando considerada no resultado, não tem data de recebimento
   // conhecida, então não entra no fluxo de caixa, VPL ou TIR.
-  const receitaLiquida = receitaDireta - impostosDireta - (comissaoAbatida?comissaoValor:0);
-  const fluxo = calcularFluxo(p, receitaLiquida, qtdDireta);
+  // A comissão NÃO é mais abatida aqui — ela é tratada dentro de calcularFluxo, respeitando a forma
+  // de pagamento escolhida (proporcional às prestações, à vista, ou parcelada).
+  const receitaLiquidaSemComissao = receitaDireta - impostosDireta;
+  const fluxo = calcularFluxo(p, receitaLiquidaSemComissao, qtdDireta, comissaoAbatida?comissaoValor:0);
+  const receitaLiquida = receitaLiquidaSemComissao - (comissaoAbatida?comissaoValor:0);
   const terrenoForaDoFluxo = p.terreno.considerarCompraFluxo===false;
   const picoAbs = Math.abs(fluxo.picoInvestimento) + (terrenoForaDoFluxo ? custoTerrenoCash : 0);
   const roiPico = picoAbs>0 ? resultado/picoAbs : 0;
@@ -768,7 +775,7 @@ function gerarParcelasComReajuste(saldoInicial, qtdParcelas, reajusteAnualPct){
   return parcelas;
 }
 
-function calcularFluxo(p, receitaLiquidaTotal, qtdDireta){
+function calcularFluxo(p, receitaLiquidaTotal, qtdDireta, comissaoTotalAbater){
   const dCompra = new Date(p.terreno.dataCompra+'T00:00:00');
   const dObra = new Date(p.obra.inicioObra+'T00:00:00');
   const dVendas = new Date(p.vendas.inicioVendas+'T00:00:00');
@@ -788,7 +795,11 @@ function calcularFluxo(p, receitaLiquidaTotal, qtdDireta){
 
   const previsao = (p.vendas.previsao && p.vendas.previsao.length) ? p.vendas.previsao : [qtdDireta];
   const somaPrevisao = previsao.reduce((s,n)=>s+(Number(n)||0),0) || 1;
-  const netPerLot = receitaLiquidaTotal / somaPrevisao;
+  const formaPagamentoComissao = (p.comissao && p.comissao.formaPagamento) || 'proporcional';
+  const qtdParcelasComissao = Math.max(Number(p.comissao && p.comissao.qtdParcelasComissao)||1, 1);
+  const abaterComissaoProporcional = formaPagamentoComissao === 'proporcional';
+  const netPerLot = (receitaLiquidaTotal - (abaterComissaoProporcional ? (comissaoTotalAbater||0) : 0)) / somaPrevisao;
+  const comissaoPorLoteDiluida = (!abaterComissaoProporcional && comissaoTotalAbater>0) ? (comissaoTotalAbater/somaPrevisao) : 0;
   const nBaloes = (valorBalao>0 && intervaloBalao>0) ? Math.floor(qtdParcelasVenda/intervaloBalao) : 0;
 
   const reajusteSaldoAnual = Number(p.vendas.condicao.reajusteSaldoAnual)||0;
@@ -805,7 +816,8 @@ function calcularFluxo(p, receitaLiquidaTotal, qtdDireta){
     const dSaldo = saldoModo==='apos_entrada' ? addMonths(dStart, entradaParcelas)
       : saldoModo==='mes_seguinte' ? addMonths(dStart, 1)
       : dStart;
-    return { qty, dStart, dSaldo, entradaMensal, parcelasArray, cohortBalao };
+    const comissaoCohort = comissaoPorLoteDiluida * qty;
+    return { qty, dStart, dSaldo, entradaMensal, parcelasArray, cohortBalao, comissaoCohort };
   });
 
   const fimObraPadrao = addMonths(dObra, prazoObra-1);
@@ -869,6 +881,20 @@ function calcularFluxo(p, receitaLiquidaTotal, qtdDireta){
       if(intervaloBalao>0 && idxS>=0 && idxS<qtdParcelasVenda && (idxS+1)%intervaloBalao===0 && c.cohortBalao){
         entradaCaixa += c.cohortBalao;
         detEntradas.push({label:`Balão — venda de ${mesVendaLabel}`, valor:c.cohortBalao});
+      }
+      if(c.comissaoCohort>0 && formaPagamentoComissao!=='proporcional'){
+        if(formaPagamentoComissao==='avista'){
+          if(idxE===0){
+            entradaCaixa -= c.comissaoCohort;
+            detEntradas.push({label:`Comissão paga à vista — venda de ${mesVendaLabel}`, valor:-c.comissaoCohort});
+          }
+        } else if(formaPagamentoComissao==='parcelado'){
+          if(idxE>=0 && idxE<qtdParcelasComissao){
+            const parcelaComissao = c.comissaoCohort/qtdParcelasComissao;
+            entradaCaixa -= parcelaComissao;
+            detEntradas.push({label:`Comissão (parcela ${idxE+1}/${qtdParcelasComissao}) — venda de ${mesVendaLabel}`, valor:-parcelaComissao});
+          }
+        }
       }
     });
 
@@ -2143,6 +2169,26 @@ function renderEditor(p){
               </select>
             </div>
           </div>
+          ${p.comissao.abaterReceita ? `
+          <div class="field-row" style="margin-top:6px;">
+            <div class="field">
+              <label>Como a comissão é paga (afeta o fluxo de caixa)</label>
+              <select data-select="comissao.formaPagamento">
+                <option value="proporcional" ${p.comissao.formaPagamento==='proporcional'?'selected':''}>Proporcional às prestações recebidas</option>
+                <option value="avista" ${p.comissao.formaPagamento==='avista'?'selected':''}>À vista, junto com a entrada de cada venda</option>
+                <option value="parcelado" ${p.comissao.formaPagamento==='parcelado'?'selected':''}>Parcelada em N meses, a partir da entrada</option>
+              </select>
+            </div>
+            ${p.comissao.formaPagamento==='parcelado' ? `
+            <div class="field"><label>Quantidade de parcelas da comissão</label><input type="number" min="1" step="1" data-f="comissao.qtdParcelasComissao" value="${p.comissao.qtdParcelasComissao}"></div>
+            ` : ''}
+          </div>
+          <div class="footnote">
+            ${p.comissao.formaPagamento==='proporcional' ? 'A comissão é descontada aos poucos, na mesma proporção de cada entrada/parcela recebida — é como se o valor que entra no caixa já fosse líquido de comissão, sem uma saída específica em nenhum mês.' : ''}
+            ${p.comissao.formaPagamento==='avista' ? 'A comissão inteira daquele lote é descontada do caixa no mesmo mês da entrada da venda — reduz o valor líquido recebido naquele mês específico, sem lançar uma saída separada.' : ''}
+            ${p.comissao.formaPagamento==='parcelado' ? 'A comissão daquele lote é dividida em partes iguais, descontadas do caixa recebido a partir do mês da entrada da venda, pelo número de parcelas definido.' : ''}
+          </div>
+          ` : ''}
           <div class="hint hint-comissao">Comissão por lote: <strong>${fmtBRL(r.comissaoPorLote)}</strong> · total sobre ${r.qtdDireta} lotes: <strong>${fmtBRL(r.comissaoValor)}</strong>
             ${r.comissaoAbatida ? `<span class="badge bad" style="margin-left:6px;">Abatida do resultado</span>` : `<span class="badge warn" style="margin-left:6px;">Apenas informativa</span>`}
           </div>
