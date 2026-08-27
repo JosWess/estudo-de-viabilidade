@@ -576,7 +576,7 @@ function projetoModelo(){
     id: 'p_modelo_'+Date.now(),
     nome: 'Modelo Sistema (planilha original)',
     criadoEm: new Date().toISOString(),
-    terreno:{ modo:'auto_total', considerarPermuta:true, considerarCompraFluxo:true, area:53531.29, perimetro: Math.round(4*Math.sqrt(53531.29)), valorCompra:6500000, sinal:500000, qtdParcelas:10, valorParcela:100000, permuta:4500000, outrosCustos:500000, dataCompra:'2024-12-01' },
+    terreno:{ modo:'auto_total', considerarPermuta:true, considerarCompraFluxo:true, area:53531.29, perimetro: Math.round(4*Math.sqrt(53531.29)), valorCompra:6500000, sinal:500000, qtdParcelas:10, valorParcela:100000, permuta:4500000, permutaModo:'valor', permutaPercentual:0, outrosCustos:500000, dataCompra:'2024-12-01' },
     lotes:{ totalLotes:243, lotesPermuta:75, lotesInvestidor:27 },
     comissao:{ valorLote:127450.38, pct:6, abaterReceita:true },
     vendas:{
@@ -598,7 +598,7 @@ function novoProjeto(nome){
     id: 'p_'+Date.now()+'_'+Math.random().toString(36).slice(2,7),
     nome: nome || 'Novo projeto',
     criadoEm: new Date().toISOString(),
-    terreno:{ modo:'auto_parcela', considerarPermuta:true, considerarCompraFluxo:true, area:0, perimetro:0, valorCompra:0, sinal:0, qtdParcelas:0, valorParcela:0, permuta:0, outrosCustos:0, dataCompra: hojeStr() },
+    terreno:{ modo:'auto_parcela', considerarPermuta:true, considerarCompraFluxo:true, area:0, perimetro:0, valorCompra:0, sinal:0, qtdParcelas:0, valorParcela:0, permuta:0, permutaModo:'valor', permutaPercentual:0, outrosCustos:0, dataCompra: hojeStr() },
     lotes:{ totalLotes:0, lotesPermuta:0, lotesInvestidor:0 },
     comissao:{ valorLote:0, pct:0, abaterReceita:true },
     vendas:{
@@ -631,6 +631,10 @@ function normalizarProjeto(p){
   }
   if(p.terreno && (p.terreno.perimetro===undefined || p.terreno.perimetro===null)){
     p.terreno.perimetro = p.terreno.area>0 ? Math.round(4*Math.sqrt(p.terreno.area)) : 0;
+  }
+  if(p.terreno && p.terreno.permutaModo===undefined){
+    p.terreno.permutaModo = 'valor';
+    p.terreno.permutaPercentual = 0;
   }
   if(p.vendas && p.vendas.investidores && p.vendas.investidores.considerarNoResultado===undefined) p.vendas.investidores.considerarNoResultado = false;
   if(p.vendas && !p.vendas.previsao) p.vendas.previsao = [];
@@ -722,6 +726,8 @@ function calcular(p){
   const terrenoForaDoFluxo = p.terreno.considerarCompraFluxo===false;
   const picoAbs = Math.abs(fluxo.picoInvestimento) + (terrenoForaDoFluxo ? custoTerrenoCash : 0);
   const roiPico = picoAbs>0 ? resultado/picoAbs : 0;
+  const multiploCaixa = 1 + roi;
+  const multiploPico = 1 + roiPico;
 
   // retorno financeiro (VPL/TIR), considerando o dinheiro ao longo do tempo
   const taxaDescontoMensal = (Number(p.financeiro && p.financeiro.taxaDescontoMensal)||0)/100;
@@ -737,7 +743,7 @@ function calcular(p){
 
   return { lotesPropios, qtdDireta, precoDireta, comissaoPorLote, receitaDireta, receitaTotal, receitaInvestidores, investidoresNoResultado, permutaConsiderada,
     custoObraTotal, custoTerrenoCash, custoTerrenoTotal, custoTotal, impostos, comissaoValor, comissaoAbatida,
-    resultado, margem, roi, roiPico, capitalPico: picoAbs, terrenoForaDoFluxo, custoLiquidoPorLote, investimentoCash, receitaLiquida,
+    resultado, margem, roi, roiPico, multiploCaixa, multiploPico, capitalPico: picoAbs, terrenoForaDoFluxo, custoLiquidoPorLote, investimentoCash, receitaLiquida,
     taxaDescontoMensal, vpl, indiceLucratividade, tirMensal, tirAnual, dataFinalProjeto, duracaoProjetoMeses,
     precoDiretaLiquido: qtdDireta>0 ? receitaLiquida/qtdDireta : 0, fluxo };
 }
@@ -929,9 +935,11 @@ function parseMoneyBR(str){
   return neg ? -result : result;
 }
 function fmtBRL(v){
-  if(v===null||v===undefined||isNaN(v)) return 'R$ 0';
+  if(v===null||v===undefined||isNaN(v)) return 'R$ 0,00';
   const neg = v<0;
-  const s = Math.abs(v).toLocaleString('pt-BR',{maximumFractionDigits:0});
+  const abs = Math.abs(v);
+  const casas = abs<1000 ? 2 : 0;
+  const s = abs.toLocaleString('pt-BR',{minimumFractionDigits:casas,maximumFractionDigits:casas});
   return (neg?'-':'')+'R$ '+s;
 }
 function fmtPct(v){ return (v*100).toLocaleString('pt-BR',{maximumFractionDigits:1})+'%'; }
@@ -1052,6 +1060,12 @@ function getInfoIndicador(chave, p, r){
         ? `${fmtBRL(r.resultado)} ÷ (${fmtBRL(Math.abs(r.fluxo.picoInvestimento))} + ${fmtBRL(r.custoTerrenoCash)}) = ${fmtBRL(r.resultado)} ÷ ${fmtBRL(r.capitalPico)} = <strong>${fmtPct(r.roiPico)}</strong>`
         : `${fmtBRL(r.resultado)} ÷ ${fmtBRL(r.capitalPico)} = <strong>${fmtPct(r.roiPico)}</strong>`
     },
+    multiploPico: {
+      titulo: 'Múltiplo sobre o investimento',
+      explicacao: `Responde direto a pergunta "quantas vezes meu dinheiro volta?" — em vez de mostrar só o lucro (retorno), mostra o total que volta pra cada real investido, incluindo o próprio real de volta. Um múltiplo de ${r.multiploPico.toFixed(2)}x quer dizer: pra cada R$ 1,00 exposto no pior momento do caixa, o projeto devolve R$ ${r.multiploPico.toFixed(2)} no total (o real de volta, mais o lucro em cima dele).`,
+      formula: '1 + Retorno sobre pico de investimento',
+      memoria: `1 + ${fmtPct(r.roiPico)} = <strong>${r.multiploPico.toFixed(2)}x</strong>`
+    },
     custoLote: {
       titulo: 'Custo líquido por lote próprio',
       explicacao: 'Quanto cada lote próprio custa ao projeto, considerando custo total, impostos e a comissão (quando abatida), dividido pelos lotes que não foram dados em permuta.',
@@ -1139,6 +1153,42 @@ function getInfoIndicador(chave, p, r){
   };
   return mapa[chave];
 }
+function abrirInfoIndicadorComparar(chave){
+  const selecionados = [...projetosComparar]
+    .map(id=>state.projetos.find(p=>p.id===id))
+    .filter(Boolean)
+    .map(p=>({ p, r: calcular(p) }));
+  if(selecionados.length<2) return;
+
+  const infos = selecionados.map(({p,r})=>({ nome:p.nome, info: getInfoIndicador(chave,p,r) })).filter(x=>x.info);
+  if(!infos.length) return;
+
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.style.zIndex = '150';
+  overlay.innerHTML = `
+    <div class="modal-box wide" style="max-width:700px;position:relative;">
+      <div class="modal-header">
+        <h2 style="font-size:16px;">${escapeHtml(infos[0].info.titulo)} — comparativo entre os projetos</h2>
+        <button class="modal-close" data-fechar-info="1">✕</button>
+      </div>
+      <div class="info-label">Fórmula (a mesma pra todos)</div>
+      <div class="info-formula">${infos[0].info.formula}</div>
+      <div class="info-label" style="margin-top:12px;">Memória de cálculo, projeto a projeto</div>
+      <div style="max-height:48vh;overflow-y:auto;margin-top:6px;">
+        ${infos.map(x=>`
+          <div style="margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--line-soft);">
+            <div style="font-weight:700;font-size:13px;margin-bottom:4px;">${escapeHtml(x.nome)}</div>
+            <div class="info-memoria">${x.info.memoria}</div>
+          </div>`).join('')}
+      </div>
+      <div style="display:flex;justify-content:flex-end;margin-top:14px;">
+        <button class="ghost" data-fechar-info="1">Fechar</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  overlay.querySelectorAll('[data-fechar-info]').forEach(el=>el.addEventListener('click', ()=>overlay.remove()));
+}
 function abrirInfoIndicador(chave){
   const p = state.atual;
   if(!p) return;
@@ -1220,6 +1270,81 @@ function exportarProjetoArquivo(p){
   baixarJSON(p, `projeto-${slugify(p.nome)}.json`);
 }
 
+function abrirRelatorioComparativo(){
+  const selecionados = [...projetosComparar]
+    .map(id=>state.projetos.find(p=>p.id===id))
+    .filter(Boolean)
+    .map(p=>({ p, r: calcular(p) }));
+  if(selecionados.length<2){ mostrarAviso('Selecione pelo menos dois projetos pra gerar o relatório do comparativo.', 'erro'); return; }
+
+  const hoje = new Date().toLocaleDateString('pt-BR');
+  const linhasDados = [
+    ['Taxa de desconto usada', selecionados.map(x=>`${x.p.financeiro.taxaDescontoMensal}% a.m.`)],
+    ['Resultado líquido', selecionados.map(x=>fmtBRL(x.r.resultado))],
+    ['Margem líquida', selecionados.map(x=>fmtPct(x.r.margem))],
+    ['Receita total', selecionados.map(x=>fmtBRL(x.r.receitaTotal))],
+    ['Custo total', selecionados.map(x=>fmtBRL(x.r.custoTotal))],
+    ['Pico de investimento em caixa', selecionados.map(x=>fmtBRL(x.r.fluxo.picoInvestimento))],
+    ['Retorno sobre caixa investido', selecionados.map(x=>fmtPct(x.r.roi))],
+    ['Retorno sobre pico de investimento', selecionados.map(x=>fmtPct(x.r.roiPico))],
+    ['Múltiplo sobre o investimento', selecionados.map(x=>x.r.multiploPico.toFixed(2)+'x')],
+    ['Índice de Lucratividade', selecionados.map(x=>x.r.indiceLucratividade!==null?x.r.indiceLucratividade.toFixed(2):'—')],
+    ['VPL do projeto', selecionados.map(x=>fmtBRL(x.r.vpl))],
+    ['TIR mensal', selecionados.map(x=>x.r.tirMensal!==null?fmtPct(x.r.tirMensal):'Não encontrada')],
+    ['TIR anual', selecionados.map(x=>x.r.tirAnual!==null?fmtPct(x.r.tirAnual):'Não encontrada')],
+    ['Início do retorno', selecionados.map(x=>x.r.fluxo.paybackMes?fmtMesAno(new Date(x.r.fluxo.paybackMes)):'Não atingido')],
+    ['Duração total do projeto', selecionados.map(x=>fmtDuracao(x.r.duracaoProjetoMeses))],
+  ];
+
+  const html = `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Comparativo de projetos — Estudo de Viabilidade</title>
+<style>
+  :root{
+    --paper:#F1EEE4; --paper-2:#E8E4D6; --ink:#1E2A30; --ink-soft:#4B5A60;
+    --line:#C9C2AC; --line-soft:#DAD5C4; --brick:#B14A28; --steel:#2E5266;
+    --mono:'Courier New', Courier, monospace; --sans:-apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+    --disp: Georgia, 'Times New Roman', serif;
+  }
+  *{box-sizing:border-box;}
+  body{font-family:var(--sans);color:var(--ink);background:#fff;margin:0;padding:0;}
+  .rel-wrap{max-width:900px;margin:0 auto;padding:36px 40px 60px;}
+  .rel-toolbar{display:flex;justify-content:flex-end;gap:8px;padding:14px 40px;background:var(--paper-2);border-bottom:1px solid var(--line);}
+  .rel-toolbar button{font-family:var(--sans);cursor:pointer;border:1.5px solid var(--ink);background:var(--brick);border-color:var(--brick);color:#fff;padding:8px 16px;border-radius:6px;font-size:13px;font-weight:600;}
+  .rel-header{border-bottom:3px solid var(--ink);padding-bottom:16px;margin-bottom:24px;}
+  .rel-header h1{font-family:var(--disp);font-size:24px;margin:0 0 4px;}
+  .rel-header .rel-sub{font-family:var(--mono);font-size:11px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:1px;}
+  table.comp-rel{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:10px;}
+  table.comp-rel th{background:var(--steel);color:#fff;font-family:var(--mono);font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;text-align:left;padding:8px 10px;}
+  table.comp-rel td{padding:7px 10px;border-bottom:1px solid var(--line-soft);font-family:var(--mono);}
+  table.comp-rel td:first-child{font-family:var(--sans);font-weight:600;background:var(--paper-2);color:var(--ink-soft);}
+  .rel-footer{margin-top:30px;padding-top:14px;border-top:1px solid var(--line-soft);font-size:11px;color:var(--ink-soft);}
+  @media print{ .rel-toolbar{display:none;} .rel-wrap{padding:0;max-width:none;} }
+</style>
+</head>
+<body>
+<div class="rel-toolbar"><button onclick="window.print()">Imprimir / Salvar como PDF</button></div>
+<div class="rel-wrap">
+  <div class="rel-header">
+    <h1>Comparativo de projetos</h1>
+    <div class="rel-sub">Estudo de Viabilidade · gerado em ${hoje}</div>
+  </div>
+  <table class="comp-rel">
+    <thead><tr><th></th>${selecionados.map(x=>`<th>${escapeHtml(x.p.nome)}</th>`).join('')}</tr></thead>
+    <tbody>
+      ${linhasDados.map(([label,vals])=>`<tr><td>${escapeHtml(label)}</td>${vals.map(v=>`<td>${escapeHtml(String(v))}</td>`).join('')}</tr>`).join('')}
+    </tbody>
+  </table>
+  <div class="rel-footer">Relatório gerado automaticamente pelo Estudo de Viabilidade em ${hoje}. Valores estimados, sujeitos a revisão. Atenção: se os projetos usam taxas de desconto diferentes, o VPL não é diretamente comparável entre eles.</div>
+</div>
+</body>
+</html>`;
+
+  baixarHTML(html, `comparativo-${new Date().toISOString().slice(0,10)}.html`);
+  mostrarAviso('Relatório do comparativo baixado.', 'sucesso');
+}
 function abrirRelatorio(p){
   const r = calcular(p);
   const pos = r.resultado>=0;
@@ -1746,6 +1871,7 @@ function renderComparar(){
   return `<div class="wrap">
     <div class="toolbar">
       <button class="back" data-back="1">← Todos os projetos</button>
+      <button class="ghost" data-relatorio-comparar="1">Relatório do comparativo</button>
     </div>
     <input class="title-input" value="Comparativo de projetos" readonly style="border:none;cursor:default;">
 
@@ -1786,8 +1912,10 @@ function renderFluxoView(p){
 
     <section class="panel">
       <h2>Retorno financeiro (VPL e TIR)</h2>
-      <div class="field-row">
+      <div class="field-row" style="align-items:flex-end;">
         <div class="field"><label>Taxa de desconto mensal (%)</label><input type="number" step="0.01" data-f="financeiro.taxaDescontoMensal" value="${p.financeiro.taxaDescontoMensal}"></div>
+        <button type="button" class="ghost small" data-atualizar-cdi="1" style="height:38px;" title="Busca o CDI mais recente no Banco Central e converte pra taxa mensal">↻ Atualizar com o CDI</button>
+        <span class="footnote" id="cdiStatusMsg" style="align-self:center;"></span>
       </div>
       <div class="field-row" style="margin-top:12px;">
         <div class="metric" style="background:var(--paper-2);border-radius:8px;padding:12px 14px;border-bottom:none;"><span class="lbl">${lblInfo('VPL do projeto','vpl')}</span><span class="val ${r.vpl>=0?'pos':'neg'}" data-vpl-valor>${fmtBRL(r.vpl)}</span></div>
@@ -1889,7 +2017,19 @@ function renderEditor(p){
               <label>Valor de cada parcela (R$)${p.terreno.modo==='auto_parcela'?' — calculado':''}</label>
               <input type="text" inputmode="decimal" class="money-in ${p.terreno.modo==='auto_parcela'?'calc':''}" data-f="terreno.valorParcela" value="${fmtMoneyInput(p.terreno.valorParcela)}" ${p.terreno.modo==='auto_parcela'?'readonly':''}>
             </div>
+            <div class="field">
+              <label>Como informar a permuta</label>
+              <select data-select="terreno.permutaModo">
+                <option value="valor" ${p.terreno.permutaModo!=='percentual'?'selected':''}>Valor em R$</option>
+                <option value="percentual" ${p.terreno.permutaModo==='percentual'?'selected':''}>% do valor de compra</option>
+              </select>
+            </div>
+            ${p.terreno.permutaModo==='percentual' ? `
+            <div class="field"><label>Permuta (% do valor de compra)</label><input type="number" step="0.1" data-f="terreno.permutaPercentual" value="${p.terreno.permutaPercentual}"></div>
+            <div class="field"><label>Permuta, em lotes (R$) — calculado</label><input type="text" class="money-in calc" value="${fmtMoneyInput(p.terreno.permuta)}" readonly></div>
+            ` : `
             <div class="field"><label>Permuta, em lotes (R$)</label><input type="text" inputmode="decimal" class="money-in" data-f="terreno.permuta" value="${fmtMoneyInput(p.terreno.permuta)}"></div>
+            `}
             <div class="field"><label>Outros custos de aquisição (R$)</label><input type="text" inputmode="decimal" class="money-in" data-f="terreno.outrosCustos" value="${fmtMoneyInput(p.terreno.outrosCustos)}"></div>
           </div>
           <div class="field-row" style="margin-top:10px;">
@@ -1965,6 +2105,11 @@ function renderEditor(p){
           <div class="hint hint-comissao">Comissão por lote: <strong>${fmtBRL(r.comissaoPorLote)}</strong> · total sobre ${r.qtdDireta} lotes: <strong>${fmtBRL(r.comissaoValor)}</strong>
             ${r.comissaoAbatida ? `<span class="badge bad" style="margin-left:6px;">Abatida do resultado</span>` : `<span class="badge warn" style="margin-left:6px;">Apenas informativa</span>`}
           </div>
+          <div class="field-row" style="margin-top:10px;align-items:flex-end;">
+            <div class="field"><label>Sugerir preço por margem sobre o custo (%)</label><input type="number" step="1" id="margemSugeridaInput" value="50" placeholder="Ex.: 50"></div>
+            <button type="button" class="ghost small" data-sugerir-preco="1" style="height:38px;">Sugerir preço de venda →</button>
+          </div>
+          <div class="footnote">Calcula o custo total dividido pelos lotes próprios, e aplica a margem informada por cima — um jeito rápido de partir de "quanto custou" pra "por quanto vender", sem digitar um preço de cabeça. Mercado de loteamento costuma trabalhar entre 40% e 80% de margem sobre custo, mas varia bastante por região e padrão do empreendimento — ajuste conforme sua realidade.</div>
         </section>
 
         <section class="panel ${paineisColapsados['venda']?'collapsed':''}" id="painel-venda">
@@ -2576,7 +2721,7 @@ function renderEstimativaTabela(){
           <td class="row-total pos" data-valor-estimado-cel="${i}">${fmtBRL(l.valor)}</td>
           <td class="row-total" style="color:${l.valorJaExistente>0?'var(--amber)':'var(--ink-soft)'};">${l.valorJaExistente>0?fmtBRL(l.valorJaExistente):'—'}</td>
           <td>${compararValorHtml(l.valor, l.valorJaExistente)}</td>
-          <td class="cel-acao">${l.editado?`<button class="ghost small" data-estimativa-reset="${i}" title="Voltar ao valor de referência">Padrão</button>`:''}</td>
+          <td class="cel-acao">${l.editado?`<button class="ghost small" data-estimativa-reset="${i}" title="Voltar ao valor de referência">Padrão</button> <button class="ghost small" data-estimativa-tornar-padrao="${i}" title="Usar esse valor editado como novo padrão do sistema, pra todos os projetos futuros">Tornar padrão</button>`:''}</td>
         </tr>`).join('')}
       <tr class="total-row"><td></td><td class="item-nome" style="position:static;">Total já lançado no projeto</td><td></td><td></td><td></td><td class="row-total" data-estimativa-total-lancado style="color:var(--amber);">${fmtBRL(totalJaLancado)}</td><td></td><td></td></tr>
       <tr class="total-row"><td></td><td class="item-nome" style="position:static;">Total estimado (todos os itens da tabela)</td><td></td><td></td><td class="row-total" data-estimativa-total-geral>${fmtBRL(totalEstimadoGeral)}</td><td></td><td></td><td></td></tr>
@@ -2597,14 +2742,20 @@ function renderEstimativaTabela(){
       const multInfo = tr.querySelector('[data-mult-info]');
       if(multInfo) multInfo.textContent = `× ${linha.mult.toFixed(2)} = ${fmtBRL(linha.taxaAtual*linha.mult)}`;
       const acaoCel = tr.querySelector('.cel-acao');
-      acaoCel.innerHTML = linha.editado ? `<button class="ghost small" data-estimativa-reset="${idx}" title="Voltar ao valor de referência">Padrão</button>` : '';
-      if(linha.editado) acaoCel.querySelector('button').addEventListener('click', ()=>resetarLinhaEstimativa(idx));
+      acaoCel.innerHTML = linha.editado ? `<button class="ghost small" data-estimativa-reset="${idx}" title="Voltar ao valor de referência">Padrão</button> <button class="ghost small" data-estimativa-tornar-padrao="${idx}" title="Usar esse valor editado como novo padrão do sistema, pra todos os projetos futuros">Tornar padrão</button>` : '';
+      if(linha.editado){
+        acaoCel.querySelector('[data-estimativa-reset]').addEventListener('click', ()=>resetarLinhaEstimativa(idx));
+        acaoCel.querySelector('[data-estimativa-tornar-padrao]').addEventListener('click', ()=>tornarPadraoEstimativa(idx));
+      }
     });
     el.addEventListener('blur', ()=>{ el.value = parseMoneyBR(el.value).toFixed(2); });
     el.addEventListener('focus', ()=>{ el.select(); });
   });
   wrap.querySelectorAll('[data-estimativa-reset]').forEach(el=>{
     el.addEventListener('click', ()=>resetarLinhaEstimativa(Number(el.getAttribute('data-estimativa-reset'))));
+  });
+  wrap.querySelectorAll('[data-estimativa-tornar-padrao]').forEach(el=>{
+    el.addEventListener('click', ()=>tornarPadraoEstimativa(Number(el.getAttribute('data-estimativa-tornar-padrao'))));
   });
   wrap.querySelectorAll('[data-estimativa-select]').forEach(el=>{
     el.addEventListener('change', ()=>{
@@ -2626,6 +2777,25 @@ function resetarLinhaEstimativa(idx){
   linha.editado = false;
   linha.valor = round2(linha.taxaAtual * linha.base * linha.mult);
   renderEstimativaTabela();
+}
+async function tornarPadraoEstimativa(idx){
+  const linha = estimativaGrid[idx];
+  if(linha.item==='Portaria' || linha.item==='Clube'){
+    CUB_CE = linha.taxaAtual;
+  } else if(linha.item==='Pavimentação'){
+    const pavAtual = OPCOES_PAVIMENTACAO.find(o=>o.id===estimativaParams.pavimentacao);
+    if(pavAtual) pavAtual.taxa = linha.taxaAtual;
+    const fallback = BANCO_CUSTOS_REFERENCIA.find(r=>r.item==='Pavimentação');
+    if(fallback) fallback.taxa = linha.taxaAtual;
+  } else {
+    const ref = BANCO_CUSTOS_REFERENCIA.find(r=>r.item===linha.item);
+    if(ref) ref.taxa = linha.taxaAtual;
+  }
+  await salvarComposicoesReferencia();
+  linha.taxaPadrao = linha.taxaAtual;
+  linha.editado = false;
+  renderEstimativaTabela();
+  mostrarAviso(`"${linha.item}": ${fmtBRL(linha.taxaAtual)} agora é o padrão do sistema, valendo pra todos os projetos a partir de agora.`, 'sucesso');
 }
 function atualizarEstimativaTotal(){
   const totalSelecionado = estimativaGrid.filter(l=>l.selecionado).reduce((s,l)=>s+l.valor,0);
@@ -2716,6 +2886,11 @@ function renderModalPrevisao(){
         <button class="ghost small" data-previsao-addrow="1">+ Adicionar mês</button>
         <button class="ghost small" data-previsao-auto="1">Distribuir igualmente</button>
         <button class="ghost small" data-previsao-limpar="1">Limpar</button>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:8px;align-items:center;flex-wrap:wrap;">
+        <input type="number" id="previsaoQtdMesesInput" value="10" min="1" style="width:70px;">
+        <button class="ghost small" data-previsao-add-n="1">+ Adicionar meses</button>
+        <button class="ghost small" data-previsao-remove-n="1">− Remover últimos meses</button>
       </div>
 
       <div class="subhead">Cenários salvos</div>
@@ -2847,6 +3022,25 @@ function bindModalPrevisaoEventosEstaticos(){
     previsaoMeses = [];
     renderPrevisaoRows();
     atualizarPrevisaoTotal();
+  });
+
+  const addNBtn = document.querySelector('[data-previsao-add-n]');
+  if(addNBtn) addNBtn.addEventListener('click', ()=>{
+    const qtd = Math.max(Number(document.getElementById('previsaoQtdMesesInput').value)||0, 1);
+    for(let i=0;i<qtd;i++) previsaoMeses.push(0);
+    renderPrevisaoRows();
+    atualizarPrevisaoTotal();
+    mostrarAviso(`${qtd} ${qtd===1?'mês adicionado':'meses adicionados'}.`, 'sucesso');
+  });
+
+  const removeNBtn = document.querySelector('[data-previsao-remove-n]');
+  if(removeNBtn) removeNBtn.addEventListener('click', ()=>{
+    const qtd = Math.max(Number(document.getElementById('previsaoQtdMesesInput').value)||0, 1);
+    const removidos = Math.min(qtd, previsaoMeses.length);
+    previsaoMeses = previsaoMeses.slice(0, previsaoMeses.length - removidos);
+    renderPrevisaoRows();
+    atualizarPrevisaoTotal();
+    mostrarAviso(`${removidos} ${removidos===1?'mês removido':'meses removidos'} (dos últimos da lista).`, removidos<qtd?'erro':'sucesso');
   });
 
   const nomeInput = document.querySelector('[data-previsao-nome]');
@@ -2981,7 +3175,7 @@ function renderCronogramaTabela(){
       <td class="row-valor sticky-col2" data-cg-valoritem="${i}">${fmtBRL(valorItem)}</td>
       <td class="row-total sticky-col3 ${diff?'neg':'pos'}" data-cg-rowtotal="${i}">${fmtBRL(total)}</td>
       <td class="row-total sticky-col4 ${saldo===0?'pos':(saldo>0?'warn':'neg')}" data-cg-rowsaldo="${i}">${fmtBRL(saldo)}</td>
-      <td class="cel-acao sticky-col5"><button class="ghost small" data-cg-parcelar="${i}">Lançar</button></td>
+      <td class="cel-acao sticky-col5"><button class="ghost small" data-cg-parcelar="${i}">Lançar</button> <button class="ghost small" data-cg-limpar-linha="${i}" title="Zerar os lançamentos dessa linha">Limpar</button></td>
       ${cels}
     </tr>`;
   }).join('');
@@ -3032,6 +3226,14 @@ function renderCronogramaTabela(){
   scroll.querySelectorAll('[data-cg-parcelar]').forEach(el=>{
     el.addEventListener('click', ()=>{
       abrirParcelarLinha(Number(el.getAttribute('data-cg-parcelar')));
+    });
+  });
+  scroll.querySelectorAll('[data-cg-limpar-linha]').forEach(el=>{
+    el.addEventListener('click', async ()=>{
+      const idx = Number(el.getAttribute('data-cg-limpar-linha'));
+      if(!(await confirmarAcao(`Zerar todos os meses lançados para "${state.atual.custos[idx].item}"?`))) return;
+      cronogramaGrid[idx] = cronogramaGrid[idx].map(()=>0);
+      renderCronogramaTabela();
     });
   });
 }
@@ -3432,6 +3634,10 @@ function renderChart(serie){
 
 function recomputeTerreno(p){
   const t = p.terreno;
+  if(t.permutaModo==='percentual'){
+    const base = t.modo==='auto_parcela' ? Number(t.valorCompra)||0 : null; // recalculado abaixo se auto_total
+    if(base!==null) t.permuta = round2(base * (Number(t.permutaPercentual)||0)/100);
+  }
   const sinal = Number(t.sinal)||0, permuta = Number(t.permuta)||0, outros = Number(t.outrosCustos)||0;
   const qtd = Number(t.qtdParcelas)||0;
   if(t.modo==='auto_parcela'){
@@ -3440,7 +3646,16 @@ function recomputeTerreno(p){
     t.valorParcela = qtd>0 ? restante/qtd : 0;
   } else {
     const parcela = Number(t.valorParcela)||0;
-    t.valorCompra = sinal + qtd*parcela + permuta + outros;
+    if(t.permutaModo==='percentual'){
+      // valorCompra depende da permuta, e a permuta (percentual) depende do valorCompra: resolve algebricamente
+      // valorCompra = sinal + qtd*parcela + outros + valorCompra*pct/100
+      const pct = (Number(t.permutaPercentual)||0)/100;
+      const semPermuta = sinal + qtd*parcela + outros;
+      t.valorCompra = pct<1 ? semPermuta/(1-pct) : semPermuta;
+      t.permuta = round2(t.valorCompra * pct);
+    } else {
+      t.valorCompra = sinal + qtd*parcela + permuta + outros;
+    }
   }
 }
 
@@ -3457,17 +3672,18 @@ function sidebarHTML(p, r, pos){
     </div>
 
     <div class="sidebar-group-label">Receita e custos</div>
-    <div class="metric"><span class="lbl">${lblInfo('Receita total'+(r.investidoresNoResultado?' (venda direta + investidores)':' (venda direta)'),'receitaTotal')}</span><span class="val">${fmtBRL(r.receitaTotal)}</span></div>
-    <div class="metric"><span class="lbl">${lblInfo('Custo do terreno'+(r.permutaConsiderada?'':' (sem permuta)'),'custoTerreno')}</span><span class="val">${fmtBRL(r.custoTerrenoTotal)}</span></div>
-    <div class="metric"><span class="lbl">${lblInfo('Custo de obra','custoObra')}</span><span class="val">${fmtBRL(r.custoObraTotal)}</span></div>
-    <div class="metric"><span class="lbl">${lblInfo('Impostos sobre venda','impostos')}</span><span class="val">${fmtBRL(r.impostos)}</span></div>
-    <div class="metric"><span class="lbl">${lblInfo('Comissão'+(r.comissaoAbatida?'':' (não abatida)'),'comissao')}</span><span class="val">${fmtBRL(r.comissaoValor)}</span></div>
-    <div class="metric"><span class="lbl">${lblInfo('Custo total','custoTotal')}</span><span class="val">${fmtBRL(r.custoTotal)}</span></div>
+    <div class="metric"><span class="lbl">${lblInfo('Receita total'+(r.investidoresNoResultado?' (venda direta + investidores)':' (venda direta)'),'receitaTotal')}</span><span class="val pos">${fmtBRL(r.receitaTotal)}</span></div>
+    <div class="metric"><span class="lbl">${lblInfo('Custo do terreno'+(r.permutaConsiderada?'':' (sem permuta)'),'custoTerreno')} <span class="badge bad" style="margin-left:4px;font-size:9px;padding:1px 6px;">redutor</span></span><span class="val neg">− ${fmtBRL(r.custoTerrenoTotal)}</span></div>
+    <div class="metric"><span class="lbl">${lblInfo('Custo de obra','custoObra')} <span class="badge bad" style="margin-left:4px;font-size:9px;padding:1px 6px;">redutor</span></span><span class="val neg">− ${fmtBRL(r.custoObraTotal)}</span></div>
+    <div class="metric"><span class="lbl">${lblInfo('Impostos sobre venda','impostos')} <span class="badge bad" style="margin-left:4px;font-size:9px;padding:1px 6px;">redutor</span></span><span class="val neg">− ${fmtBRL(r.impostos)}</span></div>
+    <div class="metric"><span class="lbl">${lblInfo('Comissão'+(r.comissaoAbatida?'':' (não abatida)'),'comissao')}${r.comissaoAbatida?' <span class="badge bad" style="margin-left:4px;font-size:9px;padding:1px 6px;">redutor</span>':''}</span><span class="val ${r.comissaoAbatida?'neg':''}">${r.comissaoAbatida?'− ':''}${fmtBRL(r.comissaoValor)}</span></div>
+    <div class="metric"><span class="lbl">${lblInfo('Custo total','custoTotal')} <span class="badge bad" style="margin-left:4px;font-size:9px;padding:1px 6px;">redutor</span></span><span class="val neg">− ${fmtBRL(r.custoTotal)}</span></div>
 
     <div class="sidebar-group-label">Indicadores</div>
     <div class="metric"><span class="lbl">${lblInfo('Margem líquida','margem')}</span><span class="val ${r.margem>=0?'pos':'neg'}">${fmtPct(r.margem)}</span></div>
     <div class="metric"><span class="lbl">${lblInfo('Retorno sobre caixa investido','roi')}</span><span class="val ${r.roi>=0?'pos':'neg'}">${fmtPct(r.roi)}</span></div>
     <div class="metric"><span class="lbl">${lblInfo('Retorno sobre pico de investimento','roiPico')}</span><span class="val ${r.roiPico>=0?'pos':'neg'}">${fmtPct(r.roiPico)}</span></div>
+    <div class="metric"><span class="lbl">${lblInfo('Múltiplo sobre o investimento','multiploPico')}</span><span class="val ${r.multiploPico>=1?'pos':'neg'}">${r.multiploPico.toFixed(2)}x</span></div>
     <div class="metric"><span class="lbl">${lblInfo('Custo líquido por lote próprio','custoLote')}</span><span class="val">${fmtBRL(r.custoLiquidoPorLote)}</span></div>
 
     <div class="sidebar-group-label">Caixa</div>
@@ -3640,8 +3856,43 @@ function bindEvents(){
   const abrirCronograma = app.querySelector('[data-abrir-cronograma]');
   if(abrirCronograma) abrirCronograma.addEventListener('click', abrirModalCronograma);
 
+  const atualizarCdiBtn = app.querySelector('[data-atualizar-cdi]');
+  if(atualizarCdiBtn) atualizarCdiBtn.addEventListener('click', async ()=>{
+    const statusEl = document.getElementById('cdiStatusMsg');
+    atualizarCdiBtn.disabled = true;
+    if(statusEl) statusEl.textContent = 'Buscando no Banco Central...';
+    try{
+      const { mensalPct, dataRef, diariaPct } = await buscarTaxaCDI();
+      state.atual.financeiro.taxaDescontoMensal = mensalPct;
+      await salvarProjeto(state.atual);
+      renderFull();
+      mostrarAviso(`Taxa atualizada: ${mensalPct}% ao mês, com base no CDI diário de ${diariaPct}% em ${dataRef} (Banco Central).`, 'sucesso');
+    }catch(e){
+      if(statusEl) statusEl.textContent = '';
+      mostrarAviso('Não deu pra buscar o CDI agora — verifique sua conexão com a internet, ou preencha a taxa manualmente.', 'erro');
+    }
+    atualizarCdiBtn.disabled = false;
+  });
+
+  const sugerirPrecoBtn = app.querySelector('[data-sugerir-preco]');
+  if(sugerirPrecoBtn) sugerirPrecoBtn.addEventListener('click', async ()=>{
+    const p = state.atual;
+    const r = calcular(p);
+    const margem = Number(document.getElementById('margemSugeridaInput').value)||0;
+    const lotesBase = r.lotesPropios>0 ? r.lotesPropios : (r.qtdDireta>0 ? r.qtdDireta : 1);
+    const custoPorLote = r.custoTotal / lotesBase;
+    const sugestao = round2(custoPorLote * (1+margem/100));
+    p.comissao.valorLote = sugestao;
+    await salvarProjeto(p);
+    renderFull();
+    mostrarAviso(`Preço sugerido: ${fmtBRL(sugestao)} por lote (custo de ${fmtBRL(custoPorLote)} + ${margem}% de margem). Revise antes de usar.`, 'sucesso');
+  });
+
   const abrirEstimativa = app.querySelector('[data-abrir-estimativa]');
   if(abrirEstimativa) abrirEstimativa.addEventListener('click', abrirModalEstimativa);
+
+  const relatorioComparar = app.querySelector('[data-relatorio-comparar]');
+  if(relatorioComparar) relatorioComparar.addEventListener('click', abrirRelatorioComparativo);
 
   const abrirComposicoes = app.querySelector('[data-abrir-composicoes]');
   if(abrirComposicoes) abrirComposicoes.addEventListener('click', abrirModalComposicoes);
@@ -3664,7 +3915,7 @@ function bindEvents(){
       const isText = !isDate && !isMoney && (el.tagName==='TEXTAREA' || el.type==='text');
       obj[key] = isDate ? el.value : isMoney ? parseMoneyBR(el.value) : isText ? el.value : (el.value===''? 0 : Number(el.value));
 
-      if(path[0]==='terreno' && ['sinal','permuta','outrosCustos','qtdParcelas','valorParcela','valorCompra'].includes(key)){
+      if(path[0]==='terreno' && ['sinal','permuta','outrosCustos','qtdParcelas','valorParcela','valorCompra','permutaPercentual'].includes(key)){
         recomputeTerreno(state.atual);
         const app2 = document.getElementById('app');
         const outroCampo = state.atual.terreno.modo==='auto_parcela' ? 'terreno.valorParcela' : 'terreno.valorCompra';
@@ -3685,6 +3936,8 @@ function bindEvents(){
         atualizarRetornoFinanceiro();
       } else if(fieldPath==='observacoes'){
         // campo livre, sem impacto em nenhum cálculo — não precisa re-renderizar
+      } else if(fieldPath==='terreno.permutaPercentual'){
+        renderFull();
       } else {
         renderSidebarAndChart();
       }
@@ -3714,7 +3967,7 @@ function bindEvents(){
       const key = path[path.length-1];
       const isBool = el.hasAttribute('data-booltype');
       obj[key] = isBool ? (el.value==='true') : el.value;
-      if(path[0]==='terreno' && key==='modo') recomputeTerreno(state.atual);
+      if(path[0]==='terreno' && (key==='modo' || key==='permutaModo')) recomputeTerreno(state.atual);
       await salvarProjeto(state.atual);
       renderFull();
     });
@@ -3830,6 +4083,19 @@ function bindEvents(){
 function renderFull(){ render(); }
 
 /* re-render leve: apenas resultado + gráfico, preservando foco do campo em edição */
+/* Busca o CDI diário mais recente na API pública do Banco Central (série SGS 12) e converte
+   pra uma taxa mensal equivalente (assumindo ~21 dias úteis por mês). Precisa de internet —
+   funciona no site publicado e em teste local, mas não dentro do visualizador do Claude. */
+async function buscarTaxaCDI(){
+  const resp = await fetch('https://api.bcb.gov.br/dados/serie/bcdata.sgs.12/dados/ultimos/1?formato=json');
+  if(!resp.ok) throw new Error('Falha ao consultar o Banco Central');
+  const dados = await resp.json();
+  if(!dados || !dados[0]) throw new Error('Resposta vazia do Banco Central');
+  const diariaPct = parseFloat(String(dados[0].valor).replace(',','.'));
+  const diariaDecimal = diariaPct/100;
+  const mensalDecimal = Math.pow(1+diariaDecimal, 21) - 1;
+  return { mensalPct: round2(mensalDecimal*100), dataRef: dados[0].data, diariaPct };
+}
 function atualizarRetornoFinanceiro(){
   const p = state.atual;
   const r = calcular(p);
@@ -3905,7 +4171,8 @@ document.addEventListener('click', function(e){
   const infoBtn = e.target.closest('.info-btn');
   if(infoBtn){
     e.stopPropagation();
-    abrirInfoIndicador(infoBtn.getAttribute('data-info'));
+    if(state.view==='comparar') abrirInfoIndicadorComparar(infoBtn.getAttribute('data-info'));
+    else abrirInfoIndicador(infoBtn.getAttribute('data-info'));
   }
 });
 
