@@ -1296,6 +1296,16 @@ function abrirRelatorioComparativo(){
     ['Duração total do projeto', selecionados.map(x=>fmtDuracao(x.r.duracaoProjetoMeses))],
   ];
 
+  const todosItensRel = [...new Set(selecionados.flatMap(x=>x.p.custos.map(c=>c.item)))];
+  const linhasOrcamentoRel = todosItensRel.map(item=>[
+    item,
+    selecionados.map(x=>{
+      const c = x.p.custos.find(cc=>cc.item===item);
+      return c ? fmtBRL(Number(c.valor)||0) : '—';
+    })
+  ]);
+  linhasOrcamentoRel.push(['Total de custo de obra', selecionados.map(x=>fmtBRL(x.r.custoObraTotal))]);
+
   const html = `<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -1337,6 +1347,15 @@ function abrirRelatorioComparativo(){
       ${linhasDados.map(([label,vals])=>`<tr><td>${escapeHtml(label)}</td>${vals.map(v=>`<td>${escapeHtml(String(v))}</td>`).join('')}</tr>`).join('')}
     </tbody>
   </table>
+
+  <h2 style="font-family:var(--disp);font-size:16px;margin:28px 0 6px;">Comparativo de orçamento (itens de custo de obra)</h2>
+  <table class="comp-rel">
+    <thead><tr><th></th>${selecionados.map(x=>`<th>${escapeHtml(x.p.nome)}</th>`).join('')}</tr></thead>
+    <tbody>
+      ${linhasOrcamentoRel.map(([label,vals])=>`<tr><td>${escapeHtml(label)}</td>${vals.map(v=>`<td>${escapeHtml(String(v))}</td>`).join('')}</tr>`).join('')}
+    </tbody>
+  </table>
+
   <div class="rel-footer">Relatório gerado automaticamente pelo Estudo de Viabilidade em ${hoje}. Valores estimados, sujeitos a revisão. Atenção: se os projetos usam taxas de desconto diferentes, o VPL não é diretamente comparável entre eles.</div>
 </div>
 </body>
@@ -1887,6 +1906,28 @@ function renderComparar(){
       </table>
     </div>
     <div class="footnote" style="margin-top:12px;">As células marcadas "melhor" indicam o maior ou menor valor entre os projetos selecionados nesse indicador específico — não é um veredito geral. Um projeto pode vencer em retorno e perder em prazo, por exemplo.</div>
+
+    <div class="subhead" style="margin-top:24px;">Comparativo de orçamento (itens de custo de obra)</div>
+    <div class="compare-scroll">
+      <table class="compare-tabela">
+        <thead><tr><th></th>${headerCols}</tr></thead>
+        <tbody>
+          ${(()=>{
+            const todosItens = [...new Set(selecionados.flatMap(x=>x.p.custos.map(c=>c.item)))];
+            const linhasItens = todosItens.map(item=>{
+              const valores = selecionados.map(x=>{
+                const c = x.p.custos.find(cc=>cc.item===item);
+                return c ? Number(c.valor)||0 : null;
+              });
+              return linhaComparar(item, null, valores, v=>v!==null?fmtBRL(v):'—', 'menor');
+            });
+            const linhaTotalObra = linhaComparar('Total de custo de obra', null, selecionados.map(x=>x.r.custoObraTotal), fmtBRL, 'menor');
+            return linhasItens.join('') + linhaTotalObra;
+          })()}
+        </tbody>
+      </table>
+    </div>
+    <div class="footnote" style="margin-top:8px;">Itens que existem num projeto e não em outro aparecem como "—". "Melhor" aqui significa menor custo naquele item — não avalia se o item foi bem dimensionado.</div>
   </div>`;
 }
 
@@ -1963,7 +2004,7 @@ function renderEditor(p){
   const lotesPropios = r.lotesPropios;
   const custosRows = p.custos.map((c,i)=>`
     <tr>
-      <td><input data-costfield="item" data-idx="${i}" value="${escapeHtml(c.item)}"></td>
+      <td><input data-costfield="item" data-idx="${i}" value="${escapeHtml(c.item)}">${c.origemAuto?' <span class="badge good" style="font-size:9px;padding:1px 6px;" title="Este valor foi lançado automaticamente pelo botão Auto">⚡ Auto</span>':''}</td>
       <td class="val"><input data-costfield="valor" data-idx="${i}" type="text" inputmode="decimal" class="money-in" value="${fmtMoneyInput(c.valor)}"></td>
       <td class="rm"><button data-rmrow="${i}" title="Remover">✕</button></td>
     </tr>`).join('');
@@ -2106,7 +2147,7 @@ function renderEditor(p){
             ${r.comissaoAbatida ? `<span class="badge bad" style="margin-left:6px;">Abatida do resultado</span>` : `<span class="badge warn" style="margin-left:6px;">Apenas informativa</span>`}
           </div>
           <div class="field-row" style="margin-top:10px;align-items:flex-end;">
-            <div class="field"><label>Sugerir preço por margem sobre o custo (%)</label><input type="number" step="1" id="margemSugeridaInput" value="50" placeholder="Ex.: 50"></div>
+            <div class="field"><label>Sugerir preço por margem sobre o custo (%)</label><input type="number" step="1" id="margemSugeridaInput" value="${margemSugeridaValor}" placeholder="Ex.: 50"></div>
             <button type="button" class="ghost small" data-sugerir-preco="1" style="height:38px;">Sugerir preço de venda →</button>
           </div>
           <div class="footnote">Calcula o custo total dividido pelos lotes próprios, e aplica a margem informada por cima — um jeito rápido de partir de "quanto custou" pra "por quanto vender", sem digitar um preço de cabeça. Mercado de loteamento costuma trabalhar entre 40% e 80% de margem sobre custo, mas varia bastante por região e padrão do empreendimento — ajuste conforme sua realidade.</div>
@@ -2190,6 +2231,7 @@ let paineisColapsados = {};
 let estimativaParams = {};
 let estimativaGrid = [];
 let estimativaAplicarLotes = true;
+let margemSugeridaValor = 50;
 
 function calcularMotorUrbanistico(p, params){
   const areaTotal = Number(p.terreno.area)||0;
@@ -2633,8 +2675,8 @@ function renderModalEstimativa(){
     }
     estimativaGrid.filter(linha=>linha.selecionado).forEach(linha=>{
       const existente = state.atual.custos.find(c=>c.item.toLowerCase()===linha.item.toLowerCase());
-      if(existente) existente.valor = linha.valor;
-      else state.atual.custos.push({ item: linha.item, valor: linha.valor, cronograma:[] });
+      if(existente){ existente.valor = linha.valor; existente.origemAuto = true; }
+      else state.atual.custos.push({ item: linha.item, valor: linha.valor, cronograma:[], origemAuto: true });
       qtdItensAplicados++;
     });
     await salvarProjeto(state.atual);
@@ -3673,11 +3715,11 @@ function sidebarHTML(p, r, pos){
 
     <div class="sidebar-group-label">Receita e custos</div>
     <div class="metric"><span class="lbl">${lblInfo('Receita total'+(r.investidoresNoResultado?' (venda direta + investidores)':' (venda direta)'),'receitaTotal')}</span><span class="val pos">${fmtBRL(r.receitaTotal)}</span></div>
-    <div class="metric"><span class="lbl">${lblInfo('Custo do terreno'+(r.permutaConsiderada?'':' (sem permuta)'),'custoTerreno')} <span class="badge bad" style="margin-left:4px;font-size:9px;padding:1px 6px;">redutor</span></span><span class="val neg">− ${fmtBRL(r.custoTerrenoTotal)}</span></div>
-    <div class="metric"><span class="lbl">${lblInfo('Custo de obra','custoObra')} <span class="badge bad" style="margin-left:4px;font-size:9px;padding:1px 6px;">redutor</span></span><span class="val neg">− ${fmtBRL(r.custoObraTotal)}</span></div>
-    <div class="metric"><span class="lbl">${lblInfo('Impostos sobre venda','impostos')} <span class="badge bad" style="margin-left:4px;font-size:9px;padding:1px 6px;">redutor</span></span><span class="val neg">− ${fmtBRL(r.impostos)}</span></div>
-    <div class="metric"><span class="lbl">${lblInfo('Comissão'+(r.comissaoAbatida?'':' (não abatida)'),'comissao')}${r.comissaoAbatida?' <span class="badge bad" style="margin-left:4px;font-size:9px;padding:1px 6px;">redutor</span>':''}</span><span class="val ${r.comissaoAbatida?'neg':''}">${r.comissaoAbatida?'− ':''}${fmtBRL(r.comissaoValor)}</span></div>
-    <div class="metric"><span class="lbl">${lblInfo('Custo total','custoTotal')} <span class="badge bad" style="margin-left:4px;font-size:9px;padding:1px 6px;">redutor</span></span><span class="val neg">− ${fmtBRL(r.custoTotal)}</span></div>
+    <div class="metric"><span class="lbl">${lblInfo('Custo do terreno'+(r.permutaConsiderada?'':' (sem permuta)'),'custoTerreno')}</span><span class="val neg">− ${fmtBRL(r.custoTerrenoTotal)}</span></div>
+    <div class="metric"><span class="lbl">${lblInfo('Custo de obra','custoObra')}</span><span class="val neg">− ${fmtBRL(r.custoObraTotal)}</span></div>
+    <div class="metric"><span class="lbl">${lblInfo('Impostos sobre venda','impostos')}</span><span class="val neg">− ${fmtBRL(r.impostos)}</span></div>
+    <div class="metric"><span class="lbl">${lblInfo('Comissão'+(r.comissaoAbatida?'':' (não abatida)'),'comissao')}</span><span class="val ${r.comissaoAbatida?'neg':''}">${r.comissaoAbatida?'− ':''}${fmtBRL(r.comissaoValor)}</span></div>
+    <div class="metric"><span class="lbl">${lblInfo('Custo total','custoTotal')}</span><span class="val neg">− ${fmtBRL(r.custoTotal)}</span></div>
 
     <div class="sidebar-group-label">Indicadores</div>
     <div class="metric"><span class="lbl">${lblInfo('Margem líquida','margem')}</span><span class="val ${r.margem>=0?'pos':'neg'}">${fmtPct(r.margem)}</span></div>
@@ -3874,11 +3916,15 @@ function bindEvents(){
     atualizarCdiBtn.disabled = false;
   });
 
+  const margemInput = app.querySelector('#margemSugeridaInput');
+  if(margemInput) margemInput.addEventListener('input', ()=>{ margemSugeridaValor = Number(margemInput.value)||0; });
+
   const sugerirPrecoBtn = app.querySelector('[data-sugerir-preco]');
   if(sugerirPrecoBtn) sugerirPrecoBtn.addEventListener('click', async ()=>{
     const p = state.atual;
     const r = calcular(p);
-    const margem = Number(document.getElementById('margemSugeridaInput').value)||0;
+    margemSugeridaValor = Number(document.getElementById('margemSugeridaInput').value)||0;
+    const margem = margemSugeridaValor;
     const lotesBase = r.lotesPropios>0 ? r.lotesPropios : (r.qtdDireta>0 ? r.qtdDireta : 1);
     const custoPorLote = r.custoTotal / lotesBase;
     const sugestao = round2(custoPorLote * (1+margem/100));
@@ -4033,6 +4079,7 @@ function bindEvents(){
       const idx = Number(el.getAttribute('data-idx'));
       const field = el.getAttribute('data-costfield');
       state.atual.custos[idx][field] = field==='valor' ? parseMoneyBR(el.value) : el.value;
+      if(field==='valor') state.atual.custos[idx].origemAuto = false;
       await salvarProjeto(state.atual);
       if(field==='valor') renderSidebarAndChart(); else renderFull();
     });
