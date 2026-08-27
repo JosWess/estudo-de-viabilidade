@@ -117,6 +117,12 @@
     background:var(--amber-bg);border:1px solid var(--amber);color:var(--amber);border-radius:8px;
     padding:12px 16px;margin:16px 0;font-size:13px;line-height:1.5;
   }
+  .aviso-fundamental{
+    background:var(--amber-bg);border:1px solid var(--amber);color:var(--amber);border-radius:8px;
+    padding:10px 16px;margin:12px 0 0;font-size:12.5px;line-height:1.5;
+  }
+  .aviso-fundamental ul{margin:4px 0 0;padding-left:18px;}
+  .aviso-fundamental li{margin:2px 0;}
   .compare-scroll{overflow-x:auto;border:1px solid var(--line);border-radius:8px;margin-top:16px;}
   table.compare-tabela{border-collapse:collapse;width:100%;font-size:13px;white-space:nowrap;}
   table.compare-tabela th, table.compare-tabela td{padding:9px 16px;border-bottom:1px solid var(--line-soft);border-right:1px solid var(--line-soft);}
@@ -588,6 +594,7 @@ function projetoModelo(){
     obra:{ inicioObra:'2026-06-01', prazoObraMeses:12 },
     fiscal:{ pctImposto:6.73 },
     financeiro:{ taxaDescontoMensal:1 },
+    autoParams: null,
     observacoesNotas:[],
     custos: ITENS_PADRAO.map(([item,valor])=>({item,valor,cronograma:[]}))
   };
@@ -610,6 +617,7 @@ function novoProjeto(nome){
     obra:{ inicioObra: hojeStr(), prazoObraMeses:1 },
     fiscal:{ pctImposto:0 },
     financeiro:{ taxaDescontoMensal:1 },
+    autoParams: null,
     observacoesNotas:[],
     custos: ITENS_PADRAO.map(([item])=>({item, valor:0, cronograma:[]}))
   };
@@ -639,6 +647,9 @@ function normalizarProjeto(p){
   if(p.comissao && p.comissao.formaPagamento===undefined){
     p.comissao.formaPagamento = 'proporcional';
     p.comissao.qtdParcelasComissao = 1;
+  }
+  if(p.autoParams===undefined){
+    p.autoParams = null; // null = ainda não rodou o Auto nesse projeto, usa os padrões de fábrica
   }
   if(p.vendas && p.vendas.investidores && p.vendas.investidores.considerarNoResultado===undefined) p.vendas.investidores.considerarNoResultado = false;
   if(p.vendas && !p.vendas.previsao) p.vendas.previsao = [];
@@ -883,16 +894,17 @@ function calcularFluxo(p, receitaLiquidaTotal, qtdDireta, comissaoTotalAbater){
         detEntradas.push({label:`Balão — venda de ${mesVendaLabel}`, valor:c.cohortBalao});
       }
       if(c.comissaoCohort>0 && formaPagamentoComissao!=='proporcional'){
+        const idxAncora = entradaPct>0 ? idxE : idxS;
         if(formaPagamentoComissao==='avista'){
-          if(idxE===0){
+          if(idxAncora===0){
             entradaCaixa -= c.comissaoCohort;
             detEntradas.push({label:`Comissão paga à vista — venda de ${mesVendaLabel}`, valor:-c.comissaoCohort});
           }
         } else if(formaPagamentoComissao==='parcelado'){
-          if(idxE>=0 && idxE<qtdParcelasComissao){
+          if(idxAncora>=0 && idxAncora<qtdParcelasComissao){
             const parcelaComissao = c.comissaoCohort/qtdParcelasComissao;
             entradaCaixa -= parcelaComissao;
-            detEntradas.push({label:`Comissão (parcela ${idxE+1}/${qtdParcelasComissao}) — venda de ${mesVendaLabel}`, valor:-parcelaComissao});
+            detEntradas.push({label:`Comissão (parcela ${idxAncora+1}/${qtdParcelasComissao}) — venda de ${mesVendaLabel}`, valor:-parcelaComissao});
           }
         }
       }
@@ -1969,6 +1981,7 @@ function renderFluxoView(p){
       <button class="back" data-back-editor="1">← Voltar ao projeto</button>
     </div>
     <input class="title-input" value="${escapeHtml(p.nome)} — fluxo de caixa" readonly style="border:none;cursor:default;">
+    ${avisosFundamentaisHtml(p)}
 
     <div class="field-row" style="margin:18px 0;">
       <div class="metric" style="background:var(--paper-2);border-radius:8px;padding:12px 14px;border-bottom:none;"><span class="lbl">Pico de investimento em caixa</span><span class="val neg">${fmtBRL(r.fluxo.picoInvestimento)}${r.fluxo.picoMes?` <span class="val-sub">(${fmtMesAno(new Date(r.fluxo.picoMes))})</span>`:''}</span></div>
@@ -2050,6 +2063,7 @@ function renderEditor(p){
       </div>
     </div>
     <input class="title-input" id="titleInput" value="${escapeHtml(p.nome)}">
+    ${avisosFundamentaisHtml(p)}
 
     <div class="layout" style="margin-top:18px;">
       <div>
@@ -2194,8 +2208,9 @@ function renderEditor(p){
           </div>
           <div class="field-row" style="margin-top:10px;align-items:flex-end;">
             <div class="field"><label>Sugerir preço por margem sobre o custo (%)</label><input type="number" step="1" id="margemSugeridaInput" value="${margemSugeridaValor}" placeholder="Ex.: 50"></div>
-            <button type="button" class="ghost small" data-sugerir-preco="1" style="height:38px;">Sugerir preço de venda →</button>
+            <button type="button" class="ghost small" data-sugerir-preco="1" style="height:38px;" ${r.custoTotal<=0?'disabled title="O custo total do projeto ainda está zerado — preencha Custos de obra (ou rode o Auto) antes de pedir uma sugestão de preço."':''}>Sugerir preço de venda →</button>
           </div>
+          ${r.custoTotal<=0 ? `<div class="footnote" style="color:var(--amber);font-weight:600;">⚠ O custo total do projeto ainda está zerado (nenhum item lançado em Custos de obra) — preencha isso primeiro, manualmente ou com o Auto, senão a sugestão sai de "custo zero + margem" e não serve pra nada.</div>` : ''}
           <div class="footnote">Calcula o custo total dividido pelos lotes próprios, e aplica a margem informada por cima — um jeito rápido de partir de "quanto custou" pra "por quanto vender", sem digitar um preço de cabeça. Mercado de loteamento costuma trabalhar entre 40% e 80% de margem sobre custo, mas varia bastante por região e padrão do empreendimento — ajuste conforme sua realidade.</div>
         </section>
 
@@ -2358,7 +2373,7 @@ function abrirModalEstimativa(){
     abrirModalTerrenoRequisito();
     return;
   }
-  estimativaParams = {
+  const padroesFabrica = {
     topografia: 'plano',
     densidadeVegetal: 'pouco_denso',
     tamanhoLote: 200,
@@ -2368,6 +2383,7 @@ function abrirModalEstimativa(){
     pctVerdeInstitucional: URBANISTICO_PADRAO.pctVerdeInstitucional,
     fatorAproveitamento: URBANISTICO_PADRAO.fatorAproveitamento,
   };
+  estimativaParams = p.autoParams ? { ...padroesFabrica, ...p.autoParams } : padroesFabrica;
   estimativaAplicarLotes = !(Number(p.lotes.totalLotes)>0);
   estimativaGrid = gerarGridEstimativa(p, estimativaParams);
   renderModalEstimativa();
@@ -2749,6 +2765,8 @@ function atualizarParametrosEstimativa(){
     fatorAproveitamento: Number(overlay.querySelector('#estParamFator').value)||100,
   };
   estimativaGrid = gerarGridEstimativa(state.atual, estimativaParams, estimativaGrid);
+  state.atual.autoParams = { ...estimativaParams };
+  salvarProjeto(state.atual);
   renderEstimativaResumoUrbanistico();
   renderEstimativaTabela();
 }
@@ -3747,6 +3765,17 @@ function recomputeTerreno(p){
   }
 }
 
+function avisosFundamentaisHtml(p){
+  const avisos = [];
+  if(!(Number(p.terreno.area)>0)) avisos.push('Área do terreno não preenchida — os cálculos abaixo estão todos zerados até você informar isso.');
+  if(!(Number(p.lotes.totalLotes)>0)) avisos.push('Quantidade de lotes não definida — preencha manualmente ou rode o Auto.');
+  if(!(Number(p.financeiro.taxaDescontoMensal)>0)) avisos.push('Taxa de desconto mensal está em 0% — o VPL fica igual à soma bruta do fluxo de caixa, sem descontar o custo do dinheiro no tempo.');
+  if(!avisos.length) return '';
+  return `<div class="aviso-fundamental">
+    <strong>⚠ Antes de confiar nesses números:</strong>
+    <ul>${avisos.map(a=>`<li>${escapeHtml(a)}</li>`).join('')}</ul>
+  </div>`;
+}
 function lblInfo(texto, chave){
   return `${texto}<button type="button" class="info-btn" data-info="${chave}" title="Como é calculado">i</button>`;
 }
