@@ -479,56 +479,60 @@ const OPCOES_PADRAO_EMPREENDIMENTO = [
    composicao: lista opcional de sub-itens (código, descrição, unidade, valor unitário, quantidade
    por unidade de referência) que somados formam a taxa — alimenta a tela "Tabelas de composição" */
 let BANCO_CUSTOS_REFERENCIA = [
-  { item:'Topografia', tipo:'area_total', taxa:1.00, fonte:'Estimativa de mercado — levantamento planialtimétrico' },
-  { item:'Licença de supressão vegetal', tipo:'area_total', taxa:1.80, fonte:'Estimativa de mercado (taxas e licenciamento — sem composição SINAPI aplicável)' },
+  { item:'Topografia', tipo:'area_total', taxa:1.00, fonte:'Estimativa de mercado — levantamento planialtimétrico', fonteResumo:'Estimativa de mercado' },
+  { item:'Licença de supressão vegetal', tipo:'area_total', taxa:1.80, fonte:'Estimativa de mercado (taxas e licenciamento — sem composição SINAPI aplicável)', fonteResumo:'Estimativa de mercado' },
   { item:'Supressão vegetal', tipo:'area_total', taxa:1.49, topografia:true,
     fonte:'Composição por quantidade física real (SINAPI-CE): 98525 limpeza mecanizada (R$0,72/m², direto) + 98529/98526 corte e remoção de árvore isolada (R$229,28/árvore × 15 árvores/ha, ref. Decreto 47.749/2019-MG) + 100982 carga de entulho (R$10,22/m³ × 0,015 m³/m²) + 93591 transporte (R$3,70/m³×km × 0,015 m³/m² × 5km, DMT de referência de mercado)',
+    fonteResumo:'SINAPI-CE (composição por quantidade física)',
     composicao:[
       { codigo:'98525', descricao:'Limpeza mecanizada de camada vegetal e pequenas árvores (<0,20m), com trator de esteiras', unidade:'m²', valorUnit:0.72, quantidade:1 },
       { codigo:'98529+98526', descricao:'Corte raso, recorte e remoção de raízes de árvore isolada (0,20–0,40m) — 15 árvores/ha (ref. Decreto 47.749/2019-MG)', unidade:'un/árvore', valorUnit:229.28, quantidade:0.0015 },
       { codigo:'100982', descricao:'Carga, manobra e descarga de entulho vegetal, caminhão 10m³, com escavadeira — 0,015 m³ de entulho por m² limpo', unidade:'m³', valorUnit:10.22, quantidade:0.015 },
       { codigo:'93591', descricao:'Transporte com caminhão basculante 14m³, via urbana, leito natural — DMT de 5km até o bota-fora', unidade:'m³xkm', valorUnit:3.70, quantidade:0.075 },
     ] },
-  { item:'Despachantes', tipo:'area_total', taxa:3.50, fonte:'Estimativa de mercado (sem composição SINAPI aplicável)' },
-  { item:'Marketing', tipo:'area_total', taxa:1.00, fonte:'Estimativa de mercado (sem composição SINAPI aplicável)' },
+  { item:'Despachantes', tipo:'area_total', taxa:3.50, fonte:'Estimativa de mercado (sem composição SINAPI aplicável)', fonteResumo:'Estimativa de mercado' },
+  { item:'Marketing', tipo:'area_total', taxa:1.00, fonte:'Estimativa de mercado (sem composição SINAPI aplicável)', fonteResumo:'Estimativa de mercado' },
   { item:'Terraplenagem', tipo:'area_total', taxa:5.49, topografia:true,
     fonte:'Composição por quantidade física real (SINAPI-CE): 101114 escavação (R$4,98/m³ × 0,20m de espessura de decapagem) + 100577 compactação de subleito arenoso (R$1,62/m², direto) + 100982 carga de excedente (R$10,22/m³ × 0,10 m³/m², 50% do escavado) + 93591 transporte (R$3,70/m³×km × 0,10 m³/m² × 5km)',
+    fonteResumo:'SINAPI-CE (composição por quantidade física)',
     composicao:[
       { codigo:'101114', descricao:'Escavação horizontal em solo de 1ª categoria com trator de esteiras (100HP/lâmina 2,19m³) — espessura de decapagem assumida 0,20m', unidade:'m³', valorUnit:4.98, quantidade:0.20 },
       { codigo:'100577', descricao:'Regularização e compactação de subleito, solo arenoso, para obras viárias', unidade:'m²', valorUnit:1.62, quantidade:1 },
       { codigo:'100982', descricao:'Carga, manobra e descarga de solo excedente, caminhão 10m³, com escavadeira — 50% do material escavado vira excedente', unidade:'m³', valorUnit:10.22, quantidade:0.10 },
       { codigo:'93591', descricao:'Transporte com caminhão basculante 14m³, via urbana, leito natural — DMT de 5km até o bota-fora', unidade:'m³xkm', valorUnit:3.70, quantidade:0.50 },
     ] },
-  { item:'Muro', tipo:'area_total', taxa:4.50, fonte:'Estimativa de mercado (varia muito por tipo de muro — sem composição SINAPI única aplicável)' },
-  { item:'Drenagem geral', tipo:'area_viaria', taxa:14.00, fonte:'Estimativa de mercado (depende do projeto de drenagem específico — sem composição SINAPI genérica por m²)' },
-  { item:'Pavimentação', tipo:'area_viaria', taxa:94.20, fonte:'SINAPI-CE 92398 (execução piso intertravado, bloco 20x10cm e=8cm) — preço real de Fortaleza, não média nacional' }, // composicao definida em OPCOES_PAVIMENTACAO, conforme o tipo escolhido
+  { item:'Muro', tipo:'area_total', taxa:4.50, fonte:'Estimativa de mercado (varia muito por tipo de muro — sem composição SINAPI única aplicável)', fonteResumo:'Estimativa de mercado' },
+  { item:'Drenagem geral', tipo:'area_viaria', taxa:14.00, fonte:'Estimativa de mercado (depende do projeto de drenagem específico — sem composição SINAPI genérica por m²)', fonteResumo:'Estimativa de mercado' },
+  { item:'Pavimentação', tipo:'area_viaria', taxa:94.20, fonte:'SINAPI-CE 92398 (execução piso intertravado, bloco 20x10cm e=8cm) — preço real de Fortaleza, não média nacional', fonteResumo:'SINAPI-CE (Fortaleza)' }, // composicao definida em OPCOES_PAVIMENTACAO, conforme o tipo escolhido
   { item:'Meio-fio', tipo:'area_viaria', taxa:9.38,
     fonte:'SINAPI-CE 94275 — guia (meio-fio) trecho reto, concreto pré-fabricado, dimensões 100x15x13x20cm (R$42,20/m linear), convertido a R$/m² assumindo faixa viária de 9m com meio-fio dos dois lados',
+    fonteResumo:'SINAPI-CE 94275',
     composicao:[
       { codigo:'94275', descricao:'Assentamento de guia (meio-fio) trecho reto, concreto pré-fabricado 100x15x13x20cm, ambos os lados da via, ÷ 9m de largura de faixa', unidade:'m linear → m²', valorUnit:42.20, quantidade:'2 lados ÷ 9m de faixa' },
     ] },
-  { item:'Rede de água', tipo:'por_lote', taxa:1800, fonte:'Estimativa de mercado (depende do traçado da rede — sem composição SINAPI por lote aplicável). Achado parcial: SINAPI-CE 105311 cobre só o assentamento do tubo (R$4,28/m), sem ligação predial/registro/hidrômetro — insuficiente pra substituir a estimativa de mercado.' },
-  { item:'Rede de esgoto', tipo:'por_lote', taxa:2400, fonte:'Estimativa de mercado (depende do traçado da rede — sem composição SINAPI por lote aplicável). Achado parcial: SINAPI-CE 90733 cobre só o assentamento do tubo (R$3,78/m), sem ligação predial/caixas — insuficiente pra substituir a estimativa de mercado.' },
-  { item:'Energia / iluminação pública', tipo:'por_lote', taxa:1500, fonte:'Estimativa de mercado (depende do projeto elétrico — sem composição SINAPI por lote aplicável)' },
+  { item:'Rede de água', tipo:'por_lote', taxa:1800, fonte:'Estimativa de mercado (depende do traçado da rede — sem composição SINAPI por lote aplicável). Achado parcial: SINAPI-CE 105311 cobre só o assentamento do tubo (R$4,28/m), sem ligação predial/registro/hidrômetro — insuficiente pra substituir a estimativa de mercado.', fonteResumo:'Estimativa de mercado' },
+  { item:'Rede de esgoto', tipo:'por_lote', taxa:2400, fonte:'Estimativa de mercado (depende do traçado da rede — sem composição SINAPI por lote aplicável). Achado parcial: SINAPI-CE 90733 cobre só o assentamento do tubo (R$3,78/m), sem ligação predial/caixas — insuficiente pra substituir a estimativa de mercado.', fonteResumo:'Estimativa de mercado' },
+  { item:'Energia / iluminação pública', tipo:'por_lote', taxa:1500, fonte:'Estimativa de mercado (depende do projeto elétrico — sem composição SINAPI por lote aplicável)', fonteResumo:'Estimativa de mercado' },
   { item:'Paisagismo', tipo:'area_verde_institucional', taxa:35.13,
     fonte:'Composição SINAPI-CE somada (não é rateio percentual — cada camada se soma sobre a mesma área): 105521 espalhamento de terra vegetal (R$5,67/m²) + 98520 adubação (R$8,73/m²) + 103946 grama esmeralda em placas (R$20,73/m²)',
+    fonteResumo:'SINAPI-CE (soma de camadas)',
     composicao:[
       { codigo:'105521', descricao:'Espalhamento de terra vegetal para o plantio', unidade:'m²', valorUnit:5.67, quantidade:1 },
       { codigo:'98520', descricao:'Aplicação de adubo em solo', unidade:'m²', valorUnit:8.73, quantidade:1 },
       { codigo:'103946', descricao:'Plantio de grama esmeralda, São Carlos ou Curitibana, em placas', unidade:'m²', valorUnit:20.73, quantidade:1 },
     ] },
-  { item:'Área institucional', tipo:'area_verde_institucional', taxa:18.00, fonte:'Estimativa de mercado (sem composição SINAPI aplicável — depende do que será construído ali)' },
+  { item:'Área institucional', tipo:'area_verde_institucional', taxa:18.00, fonte:'Estimativa de mercado (sem composição SINAPI aplicável — depende do que será construído ali)', fonteResumo:'Estimativa de mercado' },
 ];
 let OPCOES_PAVIMENTACAO = [
-  { id:'bloquete', nome:'Bloquete pré-moldado', taxa:94.20, fonte:'SINAPI-CE 92398 (execução piso intertravado, bloco 20x10cm e=8cm) — preço real de Fortaleza, não média nacional',
+  { id:'bloquete', nome:'Bloquete pré-moldado', taxa:94.20, fonte:'SINAPI-CE 92398 (execução piso intertravado, bloco 20x10cm e=8cm) — preço real de Fortaleza, não média nacional', fonteResumo:'SINAPI-CE 92398 (Fortaleza)',
     composicao:[
       { codigo:'92398', descricao:'Execução de pavimento em piso intertravado, bloco 20x10cm, e=8cm — preço específico de Fortaleza/CE', unidade:'m²', valorUnit:94.20, quantidade:1 },
     ] },
-  { id:'paralelepipedo', nome:'Paralelepípedo', taxa:98.29, fonte:'SINAPI-CE 101169 (execução em paralelepípedos, rejuntamento em argamassa) — preço real de Fortaleza, bem mais próximo do bloquete do que a média nacional sugeria',
+  { id:'paralelepipedo', nome:'Paralelepípedo', taxa:98.29, fonte:'SINAPI-CE 101169 (execução em paralelepípedos, rejuntamento em argamassa) — preço real de Fortaleza, bem mais próximo do bloquete do que a média nacional sugeria', fonteResumo:'SINAPI-CE 101169 (Fortaleza)',
     composicao:[
       { codigo:'101169', descricao:'Execução de pavimento em paralelepípedos, rejuntamento com argamassa traço 1:3 — preço específico de Fortaleza/CE', unidade:'m²', valorUnit:98.29, quantidade:1 },
     ] },
-  { id:'cascalho', nome:'Cascalho / terra (sem pavimentação)', taxa:10.40, fonte:'SINAPI-CE — base/compactação com brita graduada, sem camada de rolamento (adaptação; não há composição de "cascalho" dedicada no SINAPI)',
+  { id:'cascalho', nome:'Cascalho / terra (sem pavimentação)', taxa:10.40, fonte:'SINAPI-CE — base/compactação com brita graduada, sem camada de rolamento (adaptação; não há composição de "cascalho" dedicada no SINAPI)', fonteResumo:'SINAPI-CE (adaptado)',
     composicao:[
       { codigo:'(adaptado)', descricao:'Base/compactação com brita graduada, sem camada de rolamento por cima', unidade:'m²', valorUnit:10.40, quantidade:1 },
     ] },
@@ -2063,6 +2067,7 @@ function gerarGridEstimativa(p, params, gridAnterior){
   const linhas = BANCO_CUSTOS_REFERENCIA.map(ref=>{
     const taxaPadrao = ref.item==='Pavimentação' ? pavimento.taxa : ref.taxa;
     const fonte = ref.item==='Pavimentação' ? pavimento.fonte : ref.fonte;
+    const fonteResumo = ref.item==='Pavimentação' ? pavimento.fonteResumo : ref.fonteResumo;
     let base;
     if(ref.tipo==='area_total') base = urb.areaTotal;
     else if(ref.tipo==='area_viaria') base = urb.areaViaria;
@@ -2075,22 +2080,23 @@ function gerarGridEstimativa(p, params, gridAnterior){
     const editado = anterior ? anterior.editado : false;
     const taxaAtual = editado ? anterior.taxaAtual : taxaPadrao;
     const valor = round2(taxaAtual * base * mult);
-    return { item:ref.item, tipo:ref.tipo, topografia:!!ref.topografia, fonte, taxaPadrao, taxaAtual, base, mult, editado, valor };
+    return { item:ref.item, tipo:ref.tipo, topografia:!!ref.topografia, fonte, fonteResumo, taxaPadrao, taxaAtual, base, mult, editado, valor };
   });
 
   const cubFonte = `CUB/m² Ceará (Sinduscon-CE, R$ ${CUB_CE.toFixed(2)}/m²) × área da edificação`;
+  const cubFonteResumo = 'CUB/m² Ceará';
   const anteriorPortaria = acharAnterior('Portaria');
   const editadoPortaria = anteriorPortaria ? anteriorPortaria.editado : false;
   const taxaPortariaPadrao = CUB_CE;
   const taxaPortariaAtual = editadoPortaria ? anteriorPortaria.taxaAtual : taxaPortariaPadrao;
-  linhas.push({ item:'Portaria', tipo:'fixo', topografia:false, fonte:cubFonte, taxaPadrao:taxaPortariaPadrao, taxaAtual:taxaPortariaAtual, base:padrao.areaPortaria, mult:1, editado:editadoPortaria, valor: round2(taxaPortariaAtual*padrao.areaPortaria) });
+  linhas.push({ item:'Portaria', tipo:'fixo', topografia:false, fonte:cubFonte, fonteResumo:cubFonteResumo, taxaPadrao:taxaPortariaPadrao, taxaAtual:taxaPortariaAtual, base:padrao.areaPortaria, mult:1, editado:editadoPortaria, valor: round2(taxaPortariaAtual*padrao.areaPortaria) });
 
   if(padrao.areaClube>0){
     const anteriorClube = acharAnterior('Clube');
     const editadoClube = anteriorClube ? anteriorClube.editado : false;
     const taxaClubePadrao = CUB_CE;
     const taxaClubeAtual = editadoClube ? anteriorClube.taxaAtual : taxaClubePadrao;
-    linhas.push({ item:'Clube', tipo:'fixo', topografia:false, fonte:cubFonte, taxaPadrao:taxaClubePadrao, taxaAtual:taxaClubeAtual, base:padrao.areaClube, mult:1, editado:editadoClube, valor: round2(taxaClubeAtual*padrao.areaClube) });
+    linhas.push({ item:'Clube', tipo:'fixo', topografia:false, fonte:cubFonte, fonteResumo:cubFonteResumo, taxaPadrao:taxaClubePadrao, taxaAtual:taxaClubeAtual, base:padrao.areaClube, mult:1, editado:editadoClube, valor: round2(taxaClubeAtual*padrao.areaClube) });
   }
   return linhas;
 }
@@ -2505,7 +2511,7 @@ function renderEstimativaTabela(){
           <td class="item-nome" style="position:static;">${escapeHtml(l.item)}${l.topografia?' <span class="badge warn" style="margin-left:4px;">topografia</span>':''}
             <div class="footnote" style="margin:2px 0 0;">${tipoLabel(l.tipo)}</div>
           </td>
-          <td style="font-family:var(--mono);font-size:10.5px;color:var(--ink-soft);max-width:170px;white-space:normal;">${escapeHtml(l.fonte)}</td>
+          <td style="font-family:var(--mono);font-size:10.5px;color:var(--ink-soft);max-width:170px;white-space:normal;" title="${escapeHtml(l.fonte)}">${escapeHtml(l.fonteResumo || l.fonte)}</td>
           <td class="cel">
             <input type="text" inputmode="decimal" class="money-in" data-estimativa-taxa="${i}" value="${l.taxaAtual.toFixed(2)}" style="width:90px;">
             <div class="footnote" style="margin:2px 0 0;text-align:right;">${unidadeTaxa(l.tipo)}</div>
