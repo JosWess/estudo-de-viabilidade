@@ -613,7 +613,7 @@ function projetoModelo(){
     id: 'p_modelo_'+Date.now(),
     nome: 'Modelo Sistema (planilha original)',
     criadoEm: new Date().toISOString(),
-    terreno:{ modo:'auto_total', considerarPermuta:true, considerarCompraFluxo:true, area:53531.29, perimetro: Math.round(4*Math.sqrt(53531.29)), valorCompra:6500000, sinal:500000, qtdParcelas:10, valorParcela:100000, permuta:4500000, permutaModo:'valor', permutaPercentual:0, outrosCustos:500000, dataCompra:'2024-12-01' },
+    terreno:{ modo:'auto_total', considerarPermuta:true, considerarCompraFluxo:true, area:53531.29, perimetro: Math.round(4*Math.sqrt(53531.29)), areaViaria: Math.round(53531.29*URBANISTICO_PADRAO.pctViario/100), areaViariaEditada:false, valorCompra:6500000, sinal:500000, qtdParcelas:10, valorParcela:100000, permuta:4500000, permutaModo:'valor', permutaPercentual:0, outrosCustos:500000, dataCompra:'2024-12-01' },
     lotes:{ totalLotes:243, lotesPermuta:75, lotesInvestidor:27 },
     comissao:{ valorLote:127450.38, pct:6, abaterReceita:true, formaPagamento:'proporcional', qtdParcelasComissao:1 },
     vendas:{
@@ -636,7 +636,7 @@ function novoProjeto(nome){
     id: 'p_'+Date.now()+'_'+Math.random().toString(36).slice(2,7),
     nome: nome || 'Novo projeto',
     criadoEm: new Date().toISOString(),
-    terreno:{ modo:'auto_parcela', considerarPermuta:true, considerarCompraFluxo:true, area:0, perimetro:0, valorCompra:0, sinal:0, qtdParcelas:0, valorParcela:0, permuta:0, permutaModo:'valor', permutaPercentual:0, outrosCustos:0, dataCompra: hojeStr() },
+    terreno:{ modo:'auto_parcela', considerarPermuta:true, considerarCompraFluxo:true, area:0, perimetro:0, areaViaria:0, areaViariaEditada:false, valorCompra:0, sinal:0, qtdParcelas:0, valorParcela:0, permuta:0, permutaModo:'valor', permutaPercentual:0, outrosCustos:0, dataCompra: hojeStr() },
     lotes:{ totalLotes:0, lotesPermuta:0, lotesInvestidor:0 },
     comissao:{ valorLote:0, pct:0, abaterReceita:true, formaPagamento:'proporcional', qtdParcelasComissao:1 },
     vendas:{
@@ -670,6 +670,10 @@ function normalizarProjeto(p){
   }
   if(p.terreno && (p.terreno.perimetro===undefined || p.terreno.perimetro===null)){
     p.terreno.perimetro = p.terreno.area>0 ? Math.round(4*Math.sqrt(p.terreno.area)) : 0;
+  }
+  if(p.terreno && p.terreno.areaViaria===undefined){
+    p.terreno.areaViaria = p.terreno.area>0 ? Math.round(p.terreno.area*URBANISTICO_PADRAO.pctViario/100) : 0;
+    p.terreno.areaViariaEditada = false;
   }
   if(p.terreno && p.terreno.permutaModo===undefined){
     p.terreno.permutaModo = 'valor';
@@ -2177,9 +2181,10 @@ function renderEditor(p){
           <div class="field-row">
             <div class="field"><label>Área do terreno (m²)</label><input type="number" data-f="terreno.area" value="${p.terreno.area}"></div>
             <div class="field"><label>Perímetro (m)</label><input type="number" data-f="terreno.perimetro" value="${p.terreno.perimetro}"></div>
+            <div class="field"><label>Área viária (m²)</label><input type="number" data-f="terreno.areaViaria" value="${p.terreno.areaViaria}"></div>
             <div class="field"><label>Data da compra</label><input type="date" data-f="terreno.dataCompra" value="${p.terreno.dataCompra}"></div>
           </div>
-          <div class="footnote" style="margin:2px 0 8px;">O perímetro é calculado automaticamente quando você preenche a área (considerando um terreno aproximadamente quadrado), mas pode ser editado livremente se você souber o valor real.</div>
+          <div class="footnote" style="margin:2px 0 8px;">Perímetro e área viária são calculados automaticamente quando você preenche a área (perímetro assumindo terreno quadrado, área viária usando o % viário padrão de ${URBANISTICO_PADRAO.pctViario}%), mas os dois podem ser editados se você já tiver o valor real do projeto urbanístico. Mudar a área viária atualiza sozinho os itens do orçamento que vieram do Auto (Pavimentação, Meio-fio, Drenagem) — pra outros itens lançados manualmente, o sistema pergunta antes.</div>
 
           <div class="field-row" style="margin-top:10px;">
             <div class="field">
@@ -2886,8 +2891,8 @@ function renderModalEstimativa(){
     }
     estimativaGrid.filter(linha=>linha.selecionado).forEach(linha=>{
       const existente = state.atual.custos.find(c=>c.item.toLowerCase()===linha.item.toLowerCase());
-      if(existente){ existente.valor = linha.valor; existente.origemAuto = true; }
-      else state.atual.custos.push({ item: linha.item, valor: linha.valor, cronograma:[], origemAuto: true });
+      if(existente){ existente.valor = linha.valor; existente.origemAuto = true; existente.taxaAplicada = linha.taxaAtual; existente.baseTipo = linha.tipo; }
+      else state.atual.custos.push({ item: linha.item, valor: linha.valor, cronograma:[], origemAuto: true, taxaAplicada: linha.taxaAtual, baseTipo: linha.tipo });
       qtdItensAplicados++;
     });
     await salvarProjeto(state.atual);
@@ -3895,6 +3900,41 @@ function renderChart(serie){
   </svg>`;
 }
 
+function tipoDoItem(nomeItem){
+  const ref = BANCO_CUSTOS_REFERENCIA.find(r=>r.item===nomeItem);
+  return ref ? ref.tipo : null;
+}
+/* Quando uma "base" muda (área viária, perímetro, área total, quantidade de lotes), os itens do
+   orçamento que dependem dela precisam refletir isso. Itens lançados pelo Auto (origemAuto) são
+   recalculados sozinhos, mantendo a mesma taxa por m²/m/lote que já estava em uso. Itens lançados
+   manualmente (sem o selo Auto) só mudam se o usuário confirmar — o sistema propõe manter a mesma
+   taxa implícita (valor atual ÷ base antiga) aplicada à base nova. */
+async function propagarMudancaDeBase(p, tipoBase, valorAntigo, valorNovo){
+  if(!(valorAntigo>0) || !(valorNovo>=0) || valorNovo===valorAntigo) return;
+  const candidatos = p.custos.filter(c=>{
+    const tipo = c.baseTipo || tipoDoItem(c.item);
+    return tipo===tipoBase && Number(c.valor)>0;
+  });
+  let mudou = false;
+  for(const custo of candidatos){
+    if(custo.origemAuto){
+      const taxa = custo.taxaAplicada!=null ? custo.taxaAplicada : (custo.valor/valorAntigo);
+      custo.valor = round2(taxa*valorNovo);
+      custo.taxaAplicada = taxa;
+      mudou = true;
+    } else {
+      const taxaImplicita = custo.valor/valorAntigo;
+      const novoValor = round2(taxaImplicita*valorNovo);
+      const ok = await confirmarAcao(`"${custo.item}" não veio do Auto, mas depende de ${tipoLabel(tipoBase).toLowerCase()}, que acabou de mudar. Atualizar de ${fmtBRL(custo.valor)} pra ${fmtBRL(novoValor)}, mantendo a mesma taxa?`);
+      if(ok){ custo.valor = novoValor; mudou = true; }
+    }
+  }
+  if(mudou){
+    await salvarProjeto(p);
+    renderFull();
+    mostrarAviso(`Orçamento ajustado pela mudança em ${tipoLabel(tipoBase).toLowerCase()}.`, 'sucesso');
+  }
+}
 function recomputeTerreno(p){
   const t = p.terreno;
   if(t.permutaModo==='percentual'){
@@ -4191,6 +4231,9 @@ function bindEvents(){
       const isDate = el.type==='date';
       const isMoney = el.classList.contains('money-in');
       const isText = !isDate && !isMoney && (el.tagName==='TEXTAREA' || el.type==='text');
+      const areaAntigaCapturada = path[0]==='terreno' && key==='area' ? Number(state.atual.terreno.area)||0 : null;
+      const areaViariaAntigaCapturada = path[0]==='terreno' && (key==='area'||key==='areaViaria') ? Number(state.atual.terreno.areaViaria)||0 : null;
+      const perimetroAntigoCapturado = path[0]==='terreno' && key==='perimetro' ? Number(state.atual.terreno.perimetro)||0 : null;
       obj[key] = isDate ? el.value : isMoney ? parseMoneyBR(el.value) : isText ? el.value : (el.value===''? 0 : Number(el.value));
 
       if(path[0]==='terreno' && ['sinal','permuta','outrosCustos','qtdParcelas','valorParcela','valorCompra','permutaPercentual'].includes(key)){
@@ -4204,9 +4247,26 @@ function bindEvents(){
       }
 
       if(path[0]==='terreno' && key==='area'){
+        const areaAntiga = areaAntigaCapturada;
+        const areaViariaAntiga = areaViariaAntigaCapturada;
         state.atual.terreno.perimetro = state.atual.terreno.area>0 ? Math.round(4*Math.sqrt(state.atual.terreno.area)) : 0;
         const perimetroEl = document.querySelector('[data-f="terreno.perimetro"]');
         if(perimetroEl) perimetroEl.value = state.atual.terreno.perimetro;
+        if(!state.atual.terreno.areaViariaEditada){
+          const pctViarioUso = (state.atual.autoParams && state.atual.autoParams.pctViario) || URBANISTICO_PADRAO.pctViario;
+          state.atual.terreno.areaViaria = state.atual.terreno.area>0 ? Math.round(state.atual.terreno.area*pctViarioUso/100) : 0;
+          const areaViariaEl = document.querySelector('[data-f="terreno.areaViaria"]');
+          if(areaViariaEl) areaViariaEl.value = state.atual.terreno.areaViaria;
+        }
+        propagarMudancaDeBase(state.atual, 'area_total', areaAntiga, state.atual.terreno.area);
+        propagarMudancaDeBase(state.atual, 'area_viaria', areaViariaAntiga, state.atual.terreno.areaViaria);
+      }
+      if(path[0]==='terreno' && key==='areaViaria'){
+        state.atual.terreno.areaViariaEditada = true;
+        propagarMudancaDeBase(state.atual, 'area_viaria', areaViariaAntigaCapturada, state.atual.terreno.areaViaria);
+      }
+      if(path[0]==='terreno' && key==='perimetro'){
+        propagarMudancaDeBase(state.atual, 'perimetro', perimetroAntigoCapturado, state.atual.terreno.perimetro);
       }
 
       await salvarProjeto(state.atual);
