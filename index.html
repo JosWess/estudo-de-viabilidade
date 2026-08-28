@@ -1316,7 +1316,22 @@ function abrirRelatorioComparativo(){
   if(selecionados.length<2){ mostrarAviso('Selecione pelo menos dois projetos pra gerar o relatório do comparativo.', 'erro'); return; }
 
   const hoje = new Date().toLocaleDateString('pt-BR');
+  const padroesFabricaRel = {
+    topografia: 'plano', densidadeVegetal: 'pouco_denso', tamanhoLote: 200, padrao: 'medio', pavimentacao: 'bloquete',
+    pctViario: URBANISTICO_PADRAO.pctViario, pctVerdeInstitucional: URBANISTICO_PADRAO.pctVerdeInstitucional, fatorAproveitamento: URBANISTICO_PADRAO.fatorAproveitamento,
+  };
+  const urbSelecionadosRel = selecionados.map(x=>{
+    const params = x.p.autoParams ? { ...padroesFabricaRel, ...x.p.autoParams } : padroesFabricaRel;
+    return calcularMotorUrbanistico(x.p, params);
+  });
   const linhasDados = [
+    ['Área do terreno', selecionados.map(x=>`${Number(x.p.terreno.area).toLocaleString('pt-BR',{maximumFractionDigits:0})} m²`)],
+    ['Perímetro do terreno', selecionados.map(x=>`${Number(x.p.terreno.perimetro).toLocaleString('pt-BR',{maximumFractionDigits:0})} m`)],
+    ['Valor de compra do terreno', selecionados.map(x=>fmtBRL(x.p.terreno.valorCompra))],
+    ['ALV líquida estimada (vendável)', urbSelecionadosRel.map(u=>`${Number(u.alvLiquida).toLocaleString('pt-BR',{maximumFractionDigits:0})} m²`)],
+    ['Quantidade de lotes', selecionados.map(x=>Number(x.p.lotes.totalLotes).toLocaleString('pt-BR'))],
+    ['Preço de venda por lote', selecionados.map(x=>fmtBRL(x.p.comissao.valorLote))],
+    ['Custo por lote', selecionados.map(x=>fmtBRL(x.r.custoLiquidoPorLote))],
     ['Taxa de desconto usada', selecionados.map(x=>`${x.p.financeiro.taxaDescontoMensal}% a.m.`)],
     ['Resultado líquido', selecionados.map(x=>fmtBRL(x.r.resultado))],
     ['Margem líquida', selecionados.map(x=>fmtPct(x.r.margem))],
@@ -1908,7 +1923,23 @@ function renderComparar(){
 
   const headerCols = selecionados.map(x=>`<th>${escapeHtml(x.p.nome)}</th>`).join('');
 
+  const padroesFabricaComparar = {
+    topografia: 'plano', densidadeVegetal: 'pouco_denso', tamanhoLote: 200, padrao: 'medio', pavimentacao: 'bloquete',
+    pctViario: URBANISTICO_PADRAO.pctViario, pctVerdeInstitucional: URBANISTICO_PADRAO.pctVerdeInstitucional, fatorAproveitamento: URBANISTICO_PADRAO.fatorAproveitamento,
+  };
+  const urbSelecionados = selecionados.map(x=>{
+    const params = x.p.autoParams ? { ...padroesFabricaComparar, ...x.p.autoParams } : padroesFabricaComparar;
+    return calcularMotorUrbanistico(x.p, params);
+  });
+
   const linhas = [
+    linhaComparar('Área do terreno', null, selecionados.map(x=>x.p.terreno.area), v=>`${Number(v).toLocaleString('pt-BR',{maximumFractionDigits:0})} m²`, 'maior'),
+    linhaComparar('Perímetro do terreno', null, selecionados.map(x=>x.p.terreno.perimetro), v=>`${Number(v).toLocaleString('pt-BR',{maximumFractionDigits:0})} m`, 'menor'),
+    linhaComparar('Valor de compra do terreno', null, selecionados.map(x=>x.p.terreno.valorCompra), fmtBRL, 'menor'),
+    linhaComparar('ALV líquida estimada (vendável)', null, urbSelecionados.map(u=>u.alvLiquida), v=>`${Number(v).toLocaleString('pt-BR',{maximumFractionDigits:0})} m²`, 'maior'),
+    linhaComparar('Quantidade de lotes', null, selecionados.map(x=>x.p.lotes.totalLotes), v=>Number(v).toLocaleString('pt-BR'), 'maior'),
+    linhaComparar('Preço de venda por lote', null, selecionados.map(x=>x.p.comissao.valorLote), fmtBRL, 'maior'),
+    linhaComparar('Custo por lote', 'custoLiquidoPorLote', selecionados.map(x=>x.r.custoLiquidoPorLote), fmtBRL, 'menor'),
     linhaComparar('Taxa de desconto usada', null, selecionados.map(x=>x.p.financeiro.taxaDescontoMensal), v=>`${v}% a.m.`, null),
     linhaComparar('Resultado líquido', 'resultado', selecionados.map(x=>x.r.resultado), fmtBRL, 'maior'),
     linhaComparar('Margem líquida', 'margem', selecionados.map(x=>x.r.margem), fmtPct, 'maior'),
