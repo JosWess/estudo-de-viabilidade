@@ -4231,9 +4231,6 @@ function bindEvents(){
       const isDate = el.type==='date';
       const isMoney = el.classList.contains('money-in');
       const isText = !isDate && !isMoney && (el.tagName==='TEXTAREA' || el.type==='text');
-      const areaAntigaCapturada = path[0]==='terreno' && key==='area' ? Number(state.atual.terreno.area)||0 : null;
-      const areaViariaAntigaCapturada = path[0]==='terreno' && (key==='area'||key==='areaViaria') ? Number(state.atual.terreno.areaViaria)||0 : null;
-      const perimetroAntigoCapturado = path[0]==='terreno' && key==='perimetro' ? Number(state.atual.terreno.perimetro)||0 : null;
       obj[key] = isDate ? el.value : isMoney ? parseMoneyBR(el.value) : isText ? el.value : (el.value===''? 0 : Number(el.value));
 
       if(path[0]==='terreno' && ['sinal','permuta','outrosCustos','qtdParcelas','valorParcela','valorCompra','permutaPercentual'].includes(key)){
@@ -4247,8 +4244,6 @@ function bindEvents(){
       }
 
       if(path[0]==='terreno' && key==='area'){
-        const areaAntiga = areaAntigaCapturada;
-        const areaViariaAntiga = areaViariaAntigaCapturada;
         state.atual.terreno.perimetro = state.atual.terreno.area>0 ? Math.round(4*Math.sqrt(state.atual.terreno.area)) : 0;
         const perimetroEl = document.querySelector('[data-f="terreno.perimetro"]');
         if(perimetroEl) perimetroEl.value = state.atual.terreno.perimetro;
@@ -4258,15 +4253,9 @@ function bindEvents(){
           const areaViariaEl = document.querySelector('[data-f="terreno.areaViaria"]');
           if(areaViariaEl) areaViariaEl.value = state.atual.terreno.areaViaria;
         }
-        propagarMudancaDeBase(state.atual, 'area_total', areaAntiga, state.atual.terreno.area);
-        propagarMudancaDeBase(state.atual, 'area_viaria', areaViariaAntiga, state.atual.terreno.areaViaria);
       }
       if(path[0]==='terreno' && key==='areaViaria'){
         state.atual.terreno.areaViariaEditada = true;
-        propagarMudancaDeBase(state.atual, 'area_viaria', areaViariaAntigaCapturada, state.atual.terreno.areaViaria);
-      }
-      if(path[0]==='terreno' && key==='perimetro'){
-        propagarMudancaDeBase(state.atual, 'perimetro', perimetroAntigoCapturado, state.atual.terreno.perimetro);
       }
 
       await salvarProjeto(state.atual);
@@ -4283,6 +4272,27 @@ function bindEvents(){
     if(el.classList.contains('money-in')){
       el.addEventListener('blur', ()=>{ el.value = fmtMoneyInput(parseMoneyBR(el.value)); });
       el.addEventListener('focus', ()=>{ el.select(); });
+    }
+    const fieldPathBase = el.getAttribute('data-f');
+    if(['terreno.area','terreno.areaViaria','terreno.perimetro'].includes(fieldPathBase)){
+      const tipoBaseDoCampo = { 'terreno.area':'area_total', 'terreno.areaViaria':'area_viaria', 'terreno.perimetro':'perimetro' }[fieldPathBase];
+      el.addEventListener('focus', ()=>{
+        el.dataset.valorAoFocar = el.value;
+        if(fieldPathBase==='terreno.area') el.dataset.areaViariaAoFocar = state.atual.terreno.areaViaria;
+      });
+      el.addEventListener('blur', ()=>{
+        const valorAntigo = Number(el.dataset.valorAoFocar)||0;
+        const valorNovo = Number(el.value)||0;
+        if(valorAntigo>0 && valorNovo!==valorAntigo){
+          propagarMudancaDeBase(state.atual, tipoBaseDoCampo, valorAntigo, valorNovo);
+          if(fieldPathBase==='terreno.area'){
+            const areaViariaAoFocar = Number(el.dataset.areaViariaAoFocar) || 0;
+            if(!state.atual.terreno.areaViariaEditada && areaViariaAoFocar>0 && state.atual.terreno.areaViaria!==areaViariaAoFocar){
+              propagarMudancaDeBase(state.atual, 'area_viaria', areaViariaAoFocar, state.atual.terreno.areaViaria);
+            }
+          }
+        }
+      });
     }
     if(el.getAttribute('data-f')==='obra.inicioObra' || el.getAttribute('data-f')==='vendas.inicioVendas'){
       el.addEventListener('change', ()=>{
