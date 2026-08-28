@@ -124,6 +124,8 @@
   .aviso-fundamental ul{margin:4px 0 0;padding-left:18px;}
   .aviso-fundamental li{margin:2px 0;}
   .compare-scroll{overflow-x:auto;border:1px solid var(--line);border-radius:8px;margin-top:16px;}
+  .compare-terreno-box{background:var(--paper-2);border-color:var(--steel);}
+  .compare-terreno-box table.compare-tabela td, .compare-terreno-box table.compare-tabela th{border-right-color:var(--line);}
   table.compare-tabela{border-collapse:collapse;width:100%;font-size:13px;white-space:nowrap;}
   table.compare-tabela th, table.compare-tabela td{padding:9px 16px;border-bottom:1px solid var(--line-soft);border-right:1px solid var(--line-soft);}
   table.compare-tabela thead th{
@@ -1324,7 +1326,7 @@ function abrirRelatorioComparativo(){
     const params = x.p.autoParams ? { ...padroesFabricaRel, ...x.p.autoParams } : padroesFabricaRel;
     return calcularMotorUrbanistico(x.p, params);
   });
-  const linhasDados = [
+  const linhasTerrenoRel = [
     ['Área do terreno', selecionados.map(x=>`${Number(x.p.terreno.area).toLocaleString('pt-BR',{maximumFractionDigits:0})} m²`)],
     ['Perímetro do terreno', selecionados.map(x=>`${Number(x.p.terreno.perimetro).toLocaleString('pt-BR',{maximumFractionDigits:0})} m`)],
     ['Valor de compra do terreno', selecionados.map(x=>fmtBRL(x.p.terreno.valorCompra))],
@@ -1332,6 +1334,8 @@ function abrirRelatorioComparativo(){
     ['Quantidade de lotes', selecionados.map(x=>Number(x.p.lotes.totalLotes).toLocaleString('pt-BR'))],
     ['Preço de venda por lote', selecionados.map(x=>fmtBRL(x.p.comissao.valorLote))],
     ['Custo por lote', selecionados.map(x=>fmtBRL(x.r.custoLiquidoPorLote))],
+  ];
+  const linhasDados = [
     ['Taxa de desconto usada', selecionados.map(x=>`${x.p.financeiro.taxaDescontoMensal}% a.m.`)],
     ['Resultado líquido', selecionados.map(x=>fmtBRL(x.r.resultado))],
     ['Margem líquida', selecionados.map(x=>fmtPct(x.r.margem))],
@@ -1383,6 +1387,8 @@ function abrirRelatorioComparativo(){
   table.comp-rel th{background:var(--steel);color:#fff;font-family:var(--mono);font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;text-align:left;padding:8px 10px;}
   table.comp-rel td{padding:7px 10px;border-bottom:1px solid var(--line-soft);font-family:var(--mono);}
   table.comp-rel td:first-child{font-family:var(--sans);font-weight:600;background:var(--paper-2);color:var(--ink-soft);}
+  table.comp-rel-terreno{background:var(--paper-2);}
+  table.comp-rel-terreno th{background:var(--brick);}
   .rel-footer{margin-top:30px;padding-top:14px;border-top:1px solid var(--line-soft);font-size:11px;color:var(--ink-soft);}
   @media print{ .rel-toolbar{display:none;} .rel-wrap{padding:0;max-width:none;} }
 </style>
@@ -1394,6 +1400,15 @@ function abrirRelatorioComparativo(){
     <h1>Comparativo de projetos</h1>
     <div class="rel-sub">Estudo de Viabilidade · gerado em ${hoje}</div>
   </div>
+  <h2 style="font-family:var(--disp);font-size:16px;margin:0 0 6px;">Dados do terreno e dos lotes</h2>
+  <table class="comp-rel comp-rel-terreno">
+    <thead><tr><th></th>${selecionados.map(x=>`<th>${escapeHtml(x.p.nome)}</th>`).join('')}</tr></thead>
+    <tbody>
+      ${linhasTerrenoRel.map(([label,vals])=>`<tr><td>${escapeHtml(label)}</td>${vals.map(v=>`<td>${escapeHtml(String(v))}</td>`).join('')}</tr>`).join('')}
+    </tbody>
+  </table>
+
+  <h2 style="font-family:var(--disp);font-size:16px;margin:24px 0 6px;">Indicadores financeiros e de retorno</h2>
   <table class="comp-rel">
     <thead><tr><th></th>${selecionados.map(x=>`<th>${escapeHtml(x.p.nome)}</th>`).join('')}</tr></thead>
     <tbody>
@@ -1932,14 +1947,16 @@ function renderComparar(){
     return calcularMotorUrbanistico(x.p, params);
   });
 
+  const linhasTerreno = [
+    linhaComparar('Área do terreno', null, selecionados.map(x=>x.p.terreno.area), v=>`${Number(v).toLocaleString('pt-BR',{maximumFractionDigits:0})} m²`, null),
+    linhaComparar('Perímetro do terreno', null, selecionados.map(x=>x.p.terreno.perimetro), v=>`${Number(v).toLocaleString('pt-BR',{maximumFractionDigits:0})} m`, null),
+    linhaComparar('Valor de compra do terreno', null, selecionados.map(x=>x.p.terreno.valorCompra), fmtBRL, null),
+    linhaComparar('ALV líquida estimada (vendável)', null, urbSelecionados.map(u=>u.alvLiquida), v=>`${Number(v).toLocaleString('pt-BR',{maximumFractionDigits:0})} m²`, null),
+    linhaComparar('Quantidade de lotes', null, selecionados.map(x=>x.p.lotes.totalLotes), v=>Number(v).toLocaleString('pt-BR'), null),
+    linhaComparar('Preço de venda por lote', null, selecionados.map(x=>x.p.comissao.valorLote), fmtBRL, null),
+    linhaComparar('Custo por lote', 'custoLiquidoPorLote', selecionados.map(x=>x.r.custoLiquidoPorLote), fmtBRL, null),
+  ];
   const linhas = [
-    linhaComparar('Área do terreno', null, selecionados.map(x=>x.p.terreno.area), v=>`${Number(v).toLocaleString('pt-BR',{maximumFractionDigits:0})} m²`, 'maior'),
-    linhaComparar('Perímetro do terreno', null, selecionados.map(x=>x.p.terreno.perimetro), v=>`${Number(v).toLocaleString('pt-BR',{maximumFractionDigits:0})} m`, 'menor'),
-    linhaComparar('Valor de compra do terreno', null, selecionados.map(x=>x.p.terreno.valorCompra), fmtBRL, 'menor'),
-    linhaComparar('ALV líquida estimada (vendável)', null, urbSelecionados.map(u=>u.alvLiquida), v=>`${Number(v).toLocaleString('pt-BR',{maximumFractionDigits:0})} m²`, 'maior'),
-    linhaComparar('Quantidade de lotes', null, selecionados.map(x=>x.p.lotes.totalLotes), v=>Number(v).toLocaleString('pt-BR'), 'maior'),
-    linhaComparar('Preço de venda por lote', null, selecionados.map(x=>x.p.comissao.valorLote), fmtBRL, 'maior'),
-    linhaComparar('Custo por lote', 'custoLiquidoPorLote', selecionados.map(x=>x.r.custoLiquidoPorLote), fmtBRL, 'menor'),
     linhaComparar('Taxa de desconto usada', null, selecionados.map(x=>x.p.financeiro.taxaDescontoMensal), v=>`${v}% a.m.`, null),
     linhaComparar('Resultado líquido', 'resultado', selecionados.map(x=>x.r.resultado), fmtBRL, 'maior'),
     linhaComparar('Margem líquida', 'margem', selecionados.map(x=>x.r.margem), fmtPct, 'maior'),
@@ -1968,6 +1985,16 @@ function renderComparar(){
         <strong>Atenção:</strong> os projetos selecionados usam taxas de desconto diferentes (de ${taxaMin}% a ${taxaMax}% ao mês). O VPL não é diretamente comparável entre eles nesse caso — compare pela TIR (que independe da taxa) ou ajuste as taxas de cada projeto pra ficarem iguais antes de comparar o VPL.
       </div>` : ''}
 
+    <div class="subhead" style="margin-top:8px;">Dados do terreno e dos lotes</div>
+    <div class="compare-scroll compare-terreno-box">
+      <table class="compare-tabela">
+        <thead><tr><th></th>${headerCols}</tr></thead>
+        <tbody>${linhasTerreno.join('')}</tbody>
+      </table>
+    </div>
+    <div class="footnote" style="margin-top:8px;">Dados descritivos, sem "melhor" — não faz sentido dizer que um terreno maior ou mais caro é melhor sem olhar o resto do projeto.</div>
+
+    <div class="subhead" style="margin-top:24px;">Indicadores financeiros e de retorno</div>
     <div class="compare-scroll">
       <table class="compare-tabela">
         <thead><tr><th></th>${headerCols}</tr></thead>
