@@ -1328,10 +1328,13 @@ function abrirRelatorioComparativo(){
   });
   const temPermutaLotesRel = selecionados.some(x=>Number(x.p.lotes.lotesPermuta)>0);
   const temInvestidorLotesRel = selecionados.some(x=>Number(x.p.lotes.lotesInvestidor)>0);
+  const temPermutaValorRel = selecionados.some(x=>Number(x.p.terreno.permuta)>0);
   const linhasTerrenoRel = [
     ['Área do terreno', selecionados.map(x=>`${Number(x.p.terreno.area).toLocaleString('pt-BR',{maximumFractionDigits:0})} m²`)],
     ['Perímetro do terreno', selecionados.map(x=>`${Number(x.p.terreno.perimetro).toLocaleString('pt-BR',{maximumFractionDigits:0})} m`)],
-    ['Valor de compra do terreno', selecionados.map(x=>fmtBRL(x.p.terreno.valorCompra))],
+    ['Valor de compra do terreno (total)', selecionados.map(x=>fmtBRL(x.p.terreno.valorCompra))],
+    ...(temPermutaValorRel ? [['— em permuta (lotes)', selecionados.map(x=>fmtBRL(x.p.terreno.permuta||0))]] : []),
+    ...(temPermutaValorRel ? [['— efetivo (dinheiro)', selecionados.map(x=>fmtBRL((x.p.terreno.valorCompra||0)-(x.p.terreno.permuta||0)))]] : []),
     ['ALV líquida estimada (vendável)', urbSelecionadosRel.map(u=>`${Number(u.alvLiquida).toLocaleString('pt-BR',{maximumFractionDigits:0})} m²`)],
     ['Quantidade de lotes (total)', selecionados.map(x=>Number(x.p.lotes.totalLotes).toLocaleString('pt-BR'))],
     ...(temPermutaLotesRel ? [['— lotes de permuta', selecionados.map(x=>Number(x.p.lotes.lotesPermuta||0).toLocaleString('pt-BR'))]] : []),
@@ -1954,11 +1957,14 @@ function renderComparar(){
 
   const temPermutaLotes = selecionados.some(x=>Number(x.p.lotes.lotesPermuta)>0);
   const temInvestidorLotes = selecionados.some(x=>Number(x.p.lotes.lotesInvestidor)>0);
+  const temPermutaValor = selecionados.some(x=>Number(x.p.terreno.permuta)>0);
 
   const linhasTerreno = [
     linhaComparar('Área do terreno', null, selecionados.map(x=>x.p.terreno.area), v=>`${Number(v).toLocaleString('pt-BR',{maximumFractionDigits:0})} m²`, null),
     linhaComparar('Perímetro do terreno', null, selecionados.map(x=>x.p.terreno.perimetro), v=>`${Number(v).toLocaleString('pt-BR',{maximumFractionDigits:0})} m`, null),
-    linhaComparar('Valor de compra do terreno', null, selecionados.map(x=>x.p.terreno.valorCompra), fmtBRL, null),
+    linhaComparar('Valor de compra do terreno (total)', null, selecionados.map(x=>x.p.terreno.valorCompra), fmtBRL, null),
+    ...(temPermutaValor ? [linhaComparar('— em permuta (lotes)', null, selecionados.map(x=>x.p.terreno.permuta||0), fmtBRL, null)] : []),
+    ...(temPermutaValor ? [linhaComparar('— efetivo (dinheiro)', null, selecionados.map(x=>(x.p.terreno.valorCompra||0)-(x.p.terreno.permuta||0)), fmtBRL, null)] : []),
     linhaComparar('ALV líquida estimada (vendável)', null, urbSelecionados.map(u=>u.alvLiquida), v=>`${Number(v).toLocaleString('pt-BR',{maximumFractionDigits:0})} m²`, null),
     linhaComparar('Quantidade de lotes (total)', null, selecionados.map(x=>x.p.lotes.totalLotes), v=>Number(v).toLocaleString('pt-BR'), null),
     ...(temPermutaLotes ? [linhaComparar('— lotes de permuta', null, selecionados.map(x=>x.p.lotes.lotesPermuta), v=>Number(v||0).toLocaleString('pt-BR'), null)] : []),
