@@ -505,25 +505,46 @@ let BANCO_CUSTOS_REFERENCIA = [
     ] },
   { item:'Despachantes', tipo:'area_total', taxa:3.50, fonte:'Estimativa de mercado (sem composição SINAPI aplicável)', fonteResumo:'Estimativa de mercado' },
   { item:'Marketing', tipo:'area_total', taxa:1.00, fonte:'Estimativa de mercado (sem composição SINAPI aplicável)', fonteResumo:'Estimativa de mercado' },
-  { item:'Terraplenagem', tipo:'area_total', taxa:5.49, topografia:true,
-    fonte:'Composição por quantidade física real (SINAPI-CE): 101114 escavação (R$4,98/m³ × 0,20m de espessura de decapagem) + 100577 compactação de subleito arenoso (R$1,62/m², direto) + 100982 carga de excedente (R$10,22/m³ × 0,10 m³/m², 50% do escavado) + 93591 transporte (R$3,70/m³×km × 0,10 m³/m² × 5km)',
-    fonteResumo:'SINAPI-CE (composição por quantidade física)',
-    composicao:[
-      { codigo:'101114', descricao:'Escavação horizontal em solo de 1ª categoria com trator de esteiras (100HP/lâmina 2,19m³) — espessura de decapagem assumida 0,20m', unidade:'m³', valorUnit:4.98, quantidade:0.20 },
-      { codigo:'100577', descricao:'Regularização e compactação de subleito, solo arenoso, para obras viárias', unidade:'m²', valorUnit:1.62, quantidade:1 },
-      { codigo:'100982', descricao:'Carga, manobra e descarga de solo excedente, caminhão 10m³, com escavadeira — 50% do material escavado vira excedente', unidade:'m³', valorUnit:10.22, quantidade:0.10 },
-      { codigo:'93591', descricao:'Transporte com caminhão basculante 14m³, via urbana, leito natural — DMT de 5km até o bota-fora', unidade:'m³xkm', valorUnit:3.70, quantidade:0.50 },
-    ] },
+  { item:'Terraplenagem', tipo:'area_total', topografia:true,
+    fonteAtiva:'sinapi',
+    fontes:{
+      sinapi:{ taxa:5.49,
+        fonte:'Composição por quantidade física real (SINAPI-CE): 101114 escavação (R$4,98/m³ × 0,20m de espessura de decapagem) + 100577 compactação de subleito arenoso (R$1,62/m², direto) + 100982 carga de excedente (R$10,22/m³ × 0,10 m³/m², 50% do escavado) + 93591 transporte (R$3,70/m³×km × 0,10 m³/m² × 5km)',
+        fonteResumo:'SINAPI-CE (composição por quantidade física)',
+        composicao:[
+          { codigo:'101114', descricao:'Escavação horizontal em solo de 1ª categoria com trator de esteiras (100HP/lâmina 2,19m³) — espessura de decapagem assumida 0,20m', unidade:'m³', valorUnit:4.98, quantidade:0.20 },
+          { codigo:'100577', descricao:'Regularização e compactação de subleito, solo arenoso, para obras viárias', unidade:'m²', valorUnit:1.62, quantidade:1 },
+          { codigo:'100982', descricao:'Carga, manobra e descarga de solo excedente, caminhão 10m³, com escavadeira — 50% do material escavado vira excedente', unidade:'m³', valorUnit:10.22, quantidade:0.10 },
+          { codigo:'93591', descricao:'Transporte com caminhão basculante 14m³, via urbana, leito natural — DMT de 5km até o bota-fora', unidade:'m³xkm', valorUnit:3.70, quantidade:0.50 },
+        ] },
+      projetosAnteriores:{ taxa:4.95,
+        fonte:'Baseado no orçamento real do loteamento Ancuri (2025): escavação+carga+transporte até 800m (R$12,25/m³) + espalhamento/homogeneização/compactação (R$12,00/m³, praticamente o mesmo volume que foi escavado volta nivelado) + retirada de entulho até bota-fora (R$10,00/m³, ~5% do volume escavado). Espessura de decapagem assumida em 0,20m, igual à versão SINAPI, pra ficar comparável.',
+        fonteResumo:'Projeto Ancuri (2025) — preço praticado',
+        composicao:[
+          { codigo:'(Ancuri)', descricao:'Escavação, carga e transporte até 800m de distância', unidade:'m³', valorUnit:12.25, quantidade:0.20 },
+          { codigo:'(Ancuri)', descricao:'Espalhamento, homogeneização e compactação 100% PN', unidade:'m³', valorUnit:12.00, quantidade:0.20 },
+          { codigo:'(Ancuri)', descricao:'Retirada de entulho e expurgo (carga e transporte até bota-fora)', unidade:'m³', valorUnit:10.00, quantidade:0.01 },
+        ] },
+    } },
   { item:'Muro', tipo:'perimetro', taxa:250.00, fonte:'Estimativa de mercado — muro de bloco de concreto, altura ~2m, com fundação. Mercado 2026: R$250 a R$700/m linear conforme altura e acabamento (fonte: pesquisas de preço 2026 de reformeconstrua.com.br e outras). Usei o piso da faixa, por ser um fechamento simples de loteamento, sem reboco/pintura completos. Sem composição SINAPI única aplicável.', fonteResumo:'Estimativa de mercado (por perímetro)' },
   { item:'Drenagem geral', tipo:'area_viaria', taxa:14.00, fonte:'Estimativa de mercado (depende do projeto de drenagem específico — sem composição SINAPI genérica por m²)', fonteResumo:'Estimativa de mercado' },
   { item:'Pavimentação', tipo:'area_viaria', taxa:94.20, fonte:'SINAPI-CE 92398 (execução piso intertravado, bloco 20x10cm e=8cm) — preço real de Fortaleza, não média nacional', fonteResumo:'SINAPI-CE (Fortaleza)' }, // composicao definida em OPCOES_PAVIMENTACAO, conforme o tipo escolhido
-  { item:'Meio-fio e calçamento', tipo:'area_viaria', taxa:40.73,
-    fonte:'SINAPI-CE 94275 — guia (meio-fio) trecho reto, R$42,20/m linear + SINAPI-CE 92396 — passeio em piso intertravado, bloco retangular 20x10cm, R$94,06/m². Ambos os lados da via, passeio com largura assumida de 1,5m, convertido a R$/m² assumindo faixa viária de 9m',
-    fonteResumo:'SINAPI-CE 94275 + 92396',
-    composicao:[
-      { codigo:'94275', descricao:'Assentamento de guia (meio-fio) trecho reto, concreto pré-fabricado 100x15x13x20cm, ambos os lados da via', unidade:'m linear', valorUnit:42.20, quantidade:'2 lados ÷ 9m de faixa' },
-      { codigo:'92396', descricao:'Execução de passeio em piso intertravado, bloco retangular cor natural 20x10cm — ambos os lados, largura de passeio assumida em 1,5m', unidade:'m²', valorUnit:94.06, quantidade:'2 lados × 1,5m de largura ÷ 9m de faixa' },
-    ] },
+  { item:'Meio-fio e calçamento', tipo:'area_viaria', fonteAtiva:'sinapi',
+    fontes:{
+      sinapi:{ taxa:40.73,
+        fonte:'SINAPI-CE 94275 — guia (meio-fio) trecho reto, R$42,20/m linear + SINAPI-CE 92396 — passeio em piso intertravado, bloco retangular 20x10cm, R$94,06/m². Ambos os lados da via, passeio com largura assumida de 1,5m, convertido a R$/m² assumindo faixa viária de 9m',
+        fonteResumo:'SINAPI-CE 94275 + 92396',
+        composicao:[
+          { codigo:'94275', descricao:'Assentamento de guia (meio-fio) trecho reto, concreto pré-fabricado 100x15x13x20cm, ambos os lados da via', unidade:'m linear', valorUnit:42.20, quantidade:'2 lados ÷ 9m de faixa' },
+          { codigo:'92396', descricao:'Execução de passeio em piso intertravado, bloco retangular cor natural 20x10cm — ambos os lados, largura de passeio assumida em 1,5m', unidade:'m²', valorUnit:94.06, quantidade:'2 lados × 1,5m de largura ÷ 9m de faixa' },
+        ] },
+      projetosAnteriores:{ taxa:17.27,
+        fonte:'ATENÇÃO — escopo menor que a versão SINAPI: o orçamento do Ancuri (2025) só tem o meio-fio conjugado com sarjeta (guia+sarjeta feitas juntas, numa extrusora), a R$77,71/m linear — quase o dobro do SINAPI (R$42,20/m). Não achei um item de calçamento/passeio separado nesse projeto, então essa fonte NÃO inclui a calçada — se usar essa opção, o calçamento fica de fora do orçamento, não é que ficou mais barato.',
+        fonteResumo:'Projeto Ancuri (2025) — só guia, sem calçamento',
+        composicao:[
+          { codigo:'(Ancuri)', descricao:'Meio-fio conjugado com sarjeta, extrusado, concreto fck 20 MPa — ambos os lados da via. Não inclui calçamento (não identificado nesse projeto)', unidade:'m linear', valorUnit:77.71, quantidade:'2 lados ÷ 9m de faixa' },
+        ] },
+    } },
   { item:'Rede de água', tipo:'por_lote', taxa:1800, fonte:'Estimativa de mercado (depende do traçado da rede — sem composição SINAPI por lote aplicável). Achado parcial: SINAPI-CE 105311 cobre só o assentamento do tubo (R$4,28/m), sem ligação predial/registro/hidrômetro — insuficiente pra substituir a estimativa de mercado.', fonteResumo:'Estimativa de mercado' },
   { item:'Rede de esgoto', tipo:'por_lote', taxa:2400, fonte:'Estimativa de mercado (depende do traçado da rede — sem composição SINAPI por lote aplicável). Achado parcial: SINAPI-CE 90733 cobre só o assentamento do tubo (R$3,78/m), sem ligação predial/caixas — insuficiente pra substituir a estimativa de mercado.', fonteResumo:'Estimativa de mercado' },
   { item:'Energia / iluminação pública', tipo:'por_lote', taxa:1500, fonte:'Estimativa de mercado (depende do projeto elétrico — sem composição SINAPI por lote aplicável)', fonteResumo:'Estimativa de mercado' },
@@ -538,10 +559,18 @@ let BANCO_CUSTOS_REFERENCIA = [
   { item:'Área institucional', tipo:'area_verde_institucional', taxa:18.00, fonte:'Estimativa de mercado (sem composição SINAPI aplicável — depende do que será construído ali)', fonteResumo:'Estimativa de mercado' },
 ];
 let OPCOES_PAVIMENTACAO = [
-  { id:'bloquete', nome:'Bloquete pré-moldado', taxa:94.20, fonte:'SINAPI-CE 92398 (execução piso intertravado, bloco 20x10cm e=8cm) — preço real de Fortaleza, não média nacional', fonteResumo:'SINAPI-CE 92398 (Fortaleza)',
-    composicao:[
-      { codigo:'92398', descricao:'Execução de pavimento em piso intertravado, bloco 20x10cm, e=8cm — preço específico de Fortaleza/CE', unidade:'m²', valorUnit:94.20, quantidade:1 },
-    ] },
+  { id:'bloquete', nome:'Bloquete pré-moldado', fonteAtiva:'sinapi',
+    fontes:{
+      sinapi:{ taxa:94.20, fonte:'SINAPI-CE 92398 (execução piso intertravado, bloco 20x10cm e=8cm) — preço real de Fortaleza, não média nacional', fonteResumo:'SINAPI-CE 92398 (Fortaleza)',
+        composicao:[
+          { codigo:'92398', descricao:'Execução de pavimento em piso intertravado, bloco 20x10cm, e=8cm — preço específico de Fortaleza/CE', unidade:'m²', valorUnit:94.20, quantidade:1 },
+        ] },
+      projetosAnteriores:{ taxa:72.90, fonte:'Baseado no orçamento real do loteamento Ancuri (2025): fornecimento de piso pré-moldado articulado e intertravado 16 faces e=8cm (R$47,90/m²) + execução com colchão de areia ou pó de pedra (R$25,00/m²). Saiu 23% mais barato que o SINAPI de Fortaleza nesse projeto específico.', fonteResumo:'Projeto Ancuri (2025) — preço praticado',
+        composicao:[
+          { codigo:'(Ancuri)', descricao:'Fornecimento de piso pré-moldado articulado e intertravado, 16 faces, e=8cm (35 MPa)', unidade:'m²', valorUnit:47.90, quantidade:1 },
+          { codigo:'(Ancuri)', descricao:'Execução de piso pré-moldado, e=8cm, c/ colchão de areia ou pó de pedra', unidade:'m²', valorUnit:25.00, quantidade:1 },
+        ] },
+    } },
   { id:'paralelepipedo', nome:'Paralelepípedo', taxa:98.29, fonte:'SINAPI-CE 101169 (execução em paralelepípedos, rejuntamento em argamassa) — preço real de Fortaleza, bem mais próximo do bloquete do que a média nacional sugeria', fonteResumo:'SINAPI-CE 101169 (Fortaleza)',
     composicao:[
       { codigo:'101169', descricao:'Execução de pavimento em paralelepípedos, rejuntamento com argamassa traço 1:3 — preço específico de Fortaleza/CE', unidade:'m²', valorUnit:98.29, quantidade:1 },
@@ -2386,6 +2415,17 @@ function calcularMotorUrbanistico(p, params){
   return { areaTotal, areaViaria, areaVerdeInst, areaPublicaTotal, alvBruta, alvLiquida, qtdLotesEstimada, perimetro: Number(p.terreno.perimetro)||0 };
 }
 
+/* Alguns itens de referência têm mais de uma fonte possível (ex.: SINAPI vs. projetos anteriores).
+   Essa função devolve sempre o mesmo formato {taxa, fonte, fonteResumo, composicao}, seja o item
+   de fonte única (estrutura antiga, plana) ou de fonte múltipla (com `fontes` e `fonteAtiva`). */
+function resolverFonteAtiva(ref){
+  if(ref.fontes){
+    const chave = ref.fonteAtiva && ref.fontes[ref.fonteAtiva] ? ref.fonteAtiva : Object.keys(ref.fontes)[0];
+    return { ...ref.fontes[chave], chaveFonte: chave };
+  }
+  return { taxa: ref.taxa, fonte: ref.fonte, fonteResumo: ref.fonteResumo, composicao: ref.composicao, chaveFonte: null };
+}
+const NOMES_FONTE = { sinapi:'SINAPI-CE', projetosAnteriores:'Projetos anteriores', mercado:'Estimativa de mercado' };
 function gerarGridEstimativa(p, params, gridAnterior){
   const urb = calcularMotorUrbanistico(p, params);
   const multTopo = MULTIPLICADOR_TOPOGRAFIA.find(m=>m.id===params.topografia) || MULTIPLICADOR_TOPOGRAFIA[0];
@@ -2396,9 +2436,10 @@ function gerarGridEstimativa(p, params, gridAnterior){
   function acharAnterior(item){ return gridAnterior && gridAnterior.find(l=>l.item===item); }
 
   const linhas = BANCO_CUSTOS_REFERENCIA.map(ref=>{
-    const taxaPadrao = ref.item==='Pavimentação' ? pavimento.taxa : ref.taxa;
-    const fonte = ref.item==='Pavimentação' ? pavimento.fonte : ref.fonte;
-    const fonteResumo = ref.item==='Pavimentação' ? pavimento.fonteResumo : ref.fonteResumo;
+    const fonteResolvida = ref.item==='Pavimentação' ? resolverFonteAtiva(pavimento) : resolverFonteAtiva(ref);
+    const taxaPadrao = fonteResolvida.taxa;
+    const fonte = fonteResolvida.fonte;
+    const fonteResumo = fonteResolvida.fonteResumo;
     let base;
     if(ref.tipo==='area_total') base = urb.areaTotal;
     else if(ref.tipo==='area_viaria') base = urb.areaViaria;
@@ -2525,15 +2566,20 @@ function listaReferenciaComposicoes(){
   const linhas = [];
   BANCO_CUSTOS_REFERENCIA.forEach((r,i)=>{
     if(r.item==='Pavimentação') return;
+    const ativo = resolverFonteAtiva(r);
     linhas.push({
-      chave:`custo:${i}`, titulo:r.item, taxa:r.taxa,
-      tag: (r.composicao && r.composicao.length) ? 'SINAPI' : 'Mercado'
+      chave:`custo:${i}`, titulo:r.item, taxa:ativo.taxa,
+      tag: r.fontes ? (NOMES_FONTE[ativo.chaveFonte] || ativo.chaveFonte) : ((r.composicao && r.composicao.length) ? 'SINAPI' : 'Mercado'),
+      temVarias: !!r.fontes,
     });
   });
   OPCOES_PAVIMENTACAO.forEach((o,i)=>{
-    linhas.push({ chave:`pavimento:${i}`, titulo:`Pavimentação — ${o.nome}`, taxa:o.taxa, tag:'SINAPI' });
+    const ativo = resolverFonteAtiva(o);
+    linhas.push({ chave:`pavimento:${i}`, titulo:`Pavimentação — ${o.nome}`, taxa:ativo.taxa,
+      tag: o.fontes ? (NOMES_FONTE[ativo.chaveFonte] || ativo.chaveFonte) : 'SINAPI',
+      temVarias: !!o.fontes });
   });
-  linhas.push({ chave:'cub', titulo:'CUB/m² Ceará (usado em Portaria e Clube)', taxa:CUB_CE, tag:'CUB-CE' });
+  linhas.push({ chave:'cub', titulo:'CUB/m² Ceará (usado em Portaria e Clube)', taxa:CUB_CE, tag:'CUB-CE', temVarias:false });
   return linhas;
 }
 function resolverReferenciaPorChave(chave){
@@ -2554,14 +2600,14 @@ function abrirModalComposicoes(){
       <div class="modal-header">
         <div>
           <h2>Tabelas de composição</h2>
-          <div class="footnote" style="margin:2px 0 0;">Toque numa linha do orçamento pra ver e editar a composição SINAPI (ou o valor de mercado) usada nela. As alterações ficam salvas no banco e valem pra todos que usarem o sistema.</div>
+          <div class="footnote" style="margin:2px 0 0;">Toque numa linha do orçamento pra ver e editar a composição SINAPI (ou o valor de mercado) usada nela. Alguns itens têm mais de uma fonte disponível (ex.: SINAPI vs. um projeto anterior seu) — escolha qual usar dentro de cada item. As alterações ficam salvas no banco e valem pra todos que usarem o sistema.</div>
         </div>
         <button class="modal-close" data-fechar-composicoes="1">✕</button>
       </div>
       <div class="comp-lista" style="max-height:60vh;overflow-y:auto;margin-top:6px;">
         ${linhas.map(l=>`
           <button type="button" class="comp-lista-item" data-comp-abrir="${l.chave}">
-            <span class="comp-lista-nome">${escapeHtml(l.titulo)}</span>
+            <span class="comp-lista-nome">${escapeHtml(l.titulo)}${l.temVarias?' <span class="footnote" style="display:inline;">(2 fontes disponíveis)</span>':''}</span>
             <span class="comp-lista-valor">${fmtBRL(l.taxa)} <span class="badge ${l.tag==='Mercado'?'warn':'good'}" style="margin-left:6px;">${l.tag}</span></span>
           </button>`).join('')}
       </div>
@@ -2579,20 +2625,24 @@ let composicaoDetalheEdicao = null;
 function abrirModalComposicaoDetalhe(chave){
   fecharModalComposicaoDetalhe();
   const ref = resolverReferenciaPorChave(chave);
-  let titulo, fonte, taxaAtual, composicaoAtual;
+  let titulo, fonte, taxaAtual, composicaoAtual, temVarias, fonteSelecionada;
   if(ref.tipo==='cub'){
     titulo = 'CUB/m² Ceará (usado em Portaria e Clube)';
     fonte = 'Sinduscon-CE, categoria R8N — publicado mensalmente; atualize aqui manualmente quando o Sinduscon divulgar um novo valor.';
     taxaAtual = CUB_CE;
     composicaoAtual = [];
+    temVarias = false;
   } else {
     titulo = ref.tipo==='pavimento' ? `Pavimentação — ${ref.obj.nome}` : ref.obj.item;
-    fonte = ref.obj.fonte;
-    taxaAtual = ref.obj.taxa;
-    composicaoAtual = ref.obj.composicao ? JSON.parse(JSON.stringify(ref.obj.composicao)) : [];
+    temVarias = !!ref.obj.fontes;
+    fonteSelecionada = temVarias ? (ref.obj.fonteAtiva || Object.keys(ref.obj.fontes)[0]) : null;
+    const resolvido = resolverFonteAtiva(ref.obj);
+    fonte = resolvido.fonte;
+    taxaAtual = resolvido.taxa;
+    composicaoAtual = resolvido.composicao ? JSON.parse(JSON.stringify(resolvido.composicao)) : [];
   }
 
-  composicaoDetalheEdicao = { chave, composicao: composicaoAtual };
+  composicaoDetalheEdicao = { chave, composicao: composicaoAtual, fonteSelecionada };
 
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay modal-overlay-composicao-detalhe';
@@ -2602,7 +2652,14 @@ function abrirModalComposicaoDetalhe(chave){
       <div class="modal-header">
         <div>
           <h2>${escapeHtml(titulo)}</h2>
-          <div class="footnote" style="margin:2px 0 0;">${escapeHtml(fonte)}</div>
+          ${temVarias ? `
+          <div class="field" style="max-width:260px;margin-top:6px;">
+            <label>Fonte</label>
+            <select id="compFonteSelect">
+              ${Object.keys(ref.obj.fontes).map(k=>`<option value="${k}" ${k===fonteSelecionada?'selected':''}>${NOMES_FONTE[k]||k}</option>`).join('')}
+            </select>
+          </div>` : ''}
+          <div class="footnote" id="compFonteTexto" style="margin:6px 0 0;">${escapeHtml(fonte)}</div>
         </div>
         <button class="modal-close" data-fechar-detalhe="1">✕</button>
       </div>
@@ -2633,6 +2690,16 @@ function abrirModalComposicaoDetalhe(chave){
   });
   overlay.querySelector('[data-comp-restaurar]').addEventListener('click', ()=>restaurarComposicaoFabrica(chave));
   overlay.querySelector('[data-comp-salvar]').addEventListener('click', ()=>salvarComposicaoDetalhe(chave));
+  const fonteSelect = overlay.querySelector('#compFonteSelect');
+  if(fonteSelect) fonteSelect.addEventListener('change', ()=>{
+    const novaChave = fonteSelect.value;
+    const dadosFonte = ref.obj.fontes[novaChave];
+    composicaoDetalheEdicao.fonteSelecionada = novaChave;
+    composicaoDetalheEdicao.composicao = dadosFonte.composicao ? JSON.parse(JSON.stringify(dadosFonte.composicao)) : [];
+    document.getElementById('compFonteTexto').textContent = dadosFonte.fonte;
+    document.getElementById('compTaxaFinal').value = dadosFonte.taxa.toFixed(2);
+    renderComposicaoDetalheTabela();
+  });
 }
 function renderComposicaoDetalheTabela(){
   const wrap = document.getElementById('compDetalheTabelaWrap');
@@ -2697,12 +2764,17 @@ async function salvarComposicaoDetalhe(chave){
   const composicaoFinal = composicaoDetalheEdicao.composicao.length ? composicaoDetalheEdicao.composicao : undefined;
   if(ref.tipo==='cub'){
     CUB_CE = novaTaxa;
-  } else if(ref.tipo==='custo'){
-    BANCO_CUSTOS_REFERENCIA[ref.idx].taxa = novaTaxa;
-    BANCO_CUSTOS_REFERENCIA[ref.idx].composicao = composicaoFinal;
-  } else if(ref.tipo==='pavimento'){
-    OPCOES_PAVIMENTACAO[ref.idx].taxa = novaTaxa;
-    OPCOES_PAVIMENTACAO[ref.idx].composicao = composicaoFinal;
+  } else {
+    const alvo = ref.tipo==='custo' ? BANCO_CUSTOS_REFERENCIA[ref.idx] : OPCOES_PAVIMENTACAO[ref.idx];
+    if(alvo.fontes && composicaoDetalheEdicao.fonteSelecionada){
+      const chaveFonte = composicaoDetalheEdicao.fonteSelecionada;
+      alvo.fontes[chaveFonte].taxa = novaTaxa;
+      alvo.fontes[chaveFonte].composicao = composicaoFinal;
+      alvo.fonteAtiva = chaveFonte;
+    } else {
+      alvo.taxa = novaTaxa;
+      alvo.composicao = composicaoFinal;
+    }
   }
   await salvarComposicoesReferencia();
   fecharModalComposicaoDetalhe();
@@ -2713,8 +2785,10 @@ function restaurarComposicaoFabrica(chave){
   const ref = resolverReferenciaPorChave(chave);
   let fabrica;
   if(ref.tipo==='cub') fabrica = { taxa: COMPOSICOES_REFERENCIA_FABRICA.cubCe, composicao: [] };
-  else if(ref.tipo==='custo') fabrica = COMPOSICOES_REFERENCIA_FABRICA.custos[ref.idx];
-  else fabrica = COMPOSICOES_REFERENCIA_FABRICA.pavimentacao[ref.idx];
+  else {
+    const origem = ref.tipo==='custo' ? COMPOSICOES_REFERENCIA_FABRICA.custos[ref.idx] : COMPOSICOES_REFERENCIA_FABRICA.pavimentacao[ref.idx];
+    fabrica = (origem.fontes && composicaoDetalheEdicao.fonteSelecionada) ? origem.fontes[composicaoDetalheEdicao.fonteSelecionada] : origem;
+  }
   composicaoDetalheEdicao.composicao = fabrica.composicao ? JSON.parse(JSON.stringify(fabrica.composicao)) : [];
   const taxaInput = document.getElementById('compTaxaFinal');
   if(taxaInput) taxaInput.value = fabrica.taxa.toFixed(2);
@@ -2961,16 +3035,24 @@ function resetarLinhaEstimativa(idx){
 }
 async function tornarPadraoEstimativa(idx){
   const linha = estimativaGrid[idx];
+  function gravarNaFonteAtiva(alvo){
+    if(alvo.fontes){
+      const chave = alvo.fonteAtiva || Object.keys(alvo.fontes)[0];
+      alvo.fontes[chave].taxa = linha.taxaAtual;
+    } else {
+      alvo.taxa = linha.taxaAtual;
+    }
+  }
   if(linha.item==='Portaria' || linha.item==='Clube'){
     CUB_CE = linha.taxaAtual;
   } else if(linha.item==='Pavimentação'){
     const pavAtual = OPCOES_PAVIMENTACAO.find(o=>o.id===estimativaParams.pavimentacao);
-    if(pavAtual) pavAtual.taxa = linha.taxaAtual;
+    if(pavAtual) gravarNaFonteAtiva(pavAtual);
     const fallback = BANCO_CUSTOS_REFERENCIA.find(r=>r.item==='Pavimentação');
     if(fallback) fallback.taxa = linha.taxaAtual;
   } else {
     const ref = BANCO_CUSTOS_REFERENCIA.find(r=>r.item===linha.item);
-    if(ref) ref.taxa = linha.taxaAtual;
+    if(ref) gravarNaFonteAtiva(ref);
   }
   await salvarComposicoesReferencia();
   linha.taxaPadrao = linha.taxaAtual;
