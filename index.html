@@ -4052,6 +4052,7 @@ function bindEvents(){
       if(e.target.closest('[data-del]') || e.target.closest('[data-export]') || e.target.closest('[data-relatorio]') || e.target.closest('[data-compare]') || e.target.closest('.card-compare')) return;
       const id = el.getAttribute('data-open');
       const p = state.projetos.find(x=>x.id===id);
+      paineisColapsados = { terreno:true, lotes:true, comissao:true, venda:true, custos:true };
       state.atual = p; state.view='editor'; render();
     });
   });
@@ -4155,6 +4156,7 @@ function bindEvents(){
     state.projetos.push(p);
     await salvarProjeto(p);
     await salvarLista(state.projetos.map(x=>x.id));
+    paineisColapsados = { terreno:true, lotes:true, comissao:true, venda:true, custos:true };
     state.atual = p; state.view='editor'; render();
   });
 
