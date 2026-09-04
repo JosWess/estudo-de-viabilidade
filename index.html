@@ -614,7 +614,7 @@ function projetoModelo(){
     nome: 'Modelo Sistema (planilha original)',
     criadoEm: new Date().toISOString(),
     terreno:{ modo:'auto_total', considerarPermuta:true, considerarCompraFluxo:true, area:53531.29, perimetro: Math.round(4*Math.sqrt(53531.29)), areaViaria: Math.round(53531.29*URBANISTICO_PADRAO.pctViario/100), areaViariaEditada:false, valorCompra:6500000, sinal:500000, qtdParcelas:10, valorParcela:100000, permuta:4500000, permutaModo:'valor', permutaPercentual:0, outrosCustos:500000, dataCompra:'2024-12-01' },
-    lotes:{ totalLotes:243, lotesPermuta:75, lotesInvestidor:27 },
+    lotes:{ totalLotes:243, lotesPermuta:75 },
     comissao:{ valorLote:127450.38, pct:6, abaterReceita:true, formaPagamento:'proporcional', qtdParcelasComissao:1 },
     vendas:{
       inicioVendas:'2025-06-01',
@@ -637,7 +637,7 @@ function novoProjeto(nome){
     nome: nome || 'Novo projeto',
     criadoEm: new Date().toISOString(),
     terreno:{ modo:'auto_parcela', considerarPermuta:true, considerarCompraFluxo:true, area:0, perimetro:0, areaViaria:0, areaViariaEditada:false, valorCompra:0, sinal:0, qtdParcelas:0, valorParcela:0, permuta:0, permutaModo:'valor', permutaPercentual:0, outrosCustos:0, dataCompra: hojeStr() },
-    lotes:{ totalLotes:0, lotesPermuta:0, lotesInvestidor:0 },
+    lotes:{ totalLotes:0, lotesPermuta:0 },
     comissao:{ valorLote:0, pct:0, abaterReceita:true, formaPagamento:'proporcional', qtdParcelasComissao:1 },
     vendas:{
       inicioVendas: hojeStr(),
@@ -674,6 +674,9 @@ function normalizarProjeto(p){
   if(p.terreno && p.terreno.areaViaria===undefined){
     p.terreno.areaViaria = p.terreno.area>0 ? Math.round(p.terreno.area*URBANISTICO_PADRAO.pctViario/100) : 0;
     p.terreno.areaViariaEditada = false;
+  }
+  if(p.lotes && p.lotes.lotesInvestidor!==undefined){
+    delete p.lotes.lotesInvestidor; // campo morto — nunca foi ligado a nenhuma tela; o real é vendas.investidores.qtd
   }
   if(p.terreno && p.terreno.permutaModo===undefined){
     p.terreno.permutaModo = 'valor';
@@ -4274,8 +4277,8 @@ function bindEvents(){
       el.addEventListener('focus', ()=>{ el.select(); });
     }
     const fieldPathBase = el.getAttribute('data-f');
-    if(['terreno.area','terreno.areaViaria','terreno.perimetro'].includes(fieldPathBase)){
-      const tipoBaseDoCampo = { 'terreno.area':'area_total', 'terreno.areaViaria':'area_viaria', 'terreno.perimetro':'perimetro' }[fieldPathBase];
+    if(['terreno.area','terreno.areaViaria','terreno.perimetro','lotes.totalLotes'].includes(fieldPathBase)){
+      const tipoBaseDoCampo = { 'terreno.area':'area_total', 'terreno.areaViaria':'area_viaria', 'terreno.perimetro':'perimetro', 'lotes.totalLotes':'por_lote' }[fieldPathBase];
       el.addEventListener('focus', ()=>{
         el.dataset.valorAoFocar = el.value;
         if(fieldPathBase==='terreno.area') el.dataset.areaViariaAoFocar = state.atual.terreno.areaViaria;
